@@ -4,6 +4,16 @@ import { prisma } from "@/lib/server/db";
 import { recomputeWindowSafely } from "@/lib/server/recompute";
 import { extractTextFromScheduleFile } from "@/lib/server/schedule-import/extract";
 import { parseScheduleText } from "@/lib/server/schedule-import/parser";
+import { buildTagMetadata } from "@/lib/tags/time-categories";
+
+function inferCategoryTagByTitle(title: string) {
+  const normalized = title.toLowerCase();
+  if (/课程|上课|课表|class|lecture|study|学习/.test(normalized)) return "STUDY";
+  if (/会议|meeting|standup|sync/.test(normalized)) return "MEETING";
+  if (/锻炼|健身|run|workout|exercise|运动/.test(normalized)) return "EXERCISE";
+  if (/通勤|地铁|bus|commute/.test(normalized)) return "COMMUTE";
+  return "WORK";
+}
 
 export async function POST(request: Request) {
   try {
@@ -78,6 +88,11 @@ export async function POST(request: Request) {
               flexibility: "FIXED",
               lockState: "BUSY",
               metadata: {
+                ...buildTagMetadata(undefined, {
+                  categoryTag: inferCategoryTagByTitle(item.title),
+                  customTags: ["文件导入"],
+                  fallbackCategory: "WORK"
+                }),
                 imported: true,
                 importSource: "FILE",
                 importEngine: extracted.engine,
@@ -123,4 +138,3 @@ export async function POST(request: Request) {
     return fail(error instanceof Error ? error.message : "Failed to import schedule file");
   }
 }
-

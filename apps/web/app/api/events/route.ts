@@ -1,10 +1,11 @@
 import { z } from "zod";
-import { SmartEventPriority, SmartEventType, Flexibility, LockState } from "@prisma/client";
+import { Prisma, SmartEventPriority, SmartEventType, Flexibility, LockState } from "@prisma/client";
 import { expandOccurrences } from "@reclaim/recurrence";
 import { getOrCreateCurrentUserId } from "@/lib/auth/session";
 import { prisma } from "@/lib/server/db";
 import { fail, ok } from "@/lib/api/response";
 import { recomputeWindowSafely } from "@/lib/server/recompute";
+import { buildTagMetadata, CATEGORY_TAG_VALUES, normalizeCustomTags } from "@/lib/tags/time-categories";
 
 const createSchema = z.object({
   type: z.nativeEnum(SmartEventType),
@@ -18,7 +19,9 @@ const createSchema = z.object({
   lockState: z.nativeEnum(LockState).default("FREE"),
   dueAt: z.string().datetime().optional(),
   recurrenceRule: z.string().optional(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.any()).optional(),
+  categoryTag: z.enum(CATEGORY_TAG_VALUES).optional(),
+  customTags: z.array(z.string().min(1).max(24)).max(12).optional()
 });
 
 export async function GET(request: Request) {
@@ -82,6 +85,8 @@ export async function POST(request: Request) {
   try {
     const parsed = createSchema.parse(await request.json());
     const userId = await getOrCreateCurrentUserId();
+    const customTags = normalizeCustomTags(parsed.customTags);
+    const previousMetadata = parsed.metadata ?? {};
 
     const event = await prisma.smartEvent.create({
       data: {
@@ -97,7 +102,11 @@ export async function POST(request: Request) {
         lockState: parsed.lockState,
         dueAt: parsed.dueAt ? new Date(parsed.dueAt) : null,
         recurrenceRule: parsed.recurrenceRule,
-        metadata: parsed.metadata ?? {}
+        metadata: buildTagMetadata(previousMetadata, {
+          categoryTag: parsed.categoryTag,
+          customTags,
+          fallbackCategory: "OTHER"
+        }) as Prisma.InputJsonValue
       }
     });
 

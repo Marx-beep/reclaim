@@ -7,6 +7,7 @@ import { Button } from "@/components/shared/button";
 import { Input } from "@/components/shared/input";
 import { apiFetch } from "@/lib/api/client";
 import { t } from "@/lib/i18n";
+import { CATEGORY_TAG_OPTIONS, type CategoryTag } from "@/lib/tags/time-categories";
 
 function toLocalInputValue(date: Date) {
   const timezoneOffsetMs = date.getTimezoneOffset() * 60_000;
@@ -32,6 +33,17 @@ function habitRuleFromPreset(preset: HabitPreset) {
   return "FREQ=DAILY;INTERVAL=1";
 }
 
+function parseCustomTags(input: string) {
+  return Array.from(
+    new Set(
+      input
+        .split(/[,，]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 12);
+}
+
 export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: string; end: string } | null }) {
   const queryClient = useQueryClient();
   const copy = t("dashboard");
@@ -39,16 +51,20 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
   const initialTaskWindow = defaultTimeWindow(60, 120);
   const initialHabitWindow = defaultTimeWindow(120, 150);
 
-  const [taskTitle, setTaskTitle] = useState("准备下周冲刺计划");
+  const [taskTitle, setTaskTitle] = useState("");
   const [taskStartAt, setTaskStartAt] = useState(initialTaskWindow.startAt);
   const [taskEndAt, setTaskEndAt] = useState(initialTaskWindow.endAt);
   const [taskDueAt, setTaskDueAt] = useState(toLocalInputValue(new Date(Date.now() + 24 * 60 * 60_000)));
   const [taskPriority, setTaskPriority] = useState<"P1" | "P2" | "P3" | "P4">("P2");
+  const [taskCategoryTag, setTaskCategoryTag] = useState<CategoryTag>("WORK");
+  const [taskCustomTagsInput, setTaskCustomTagsInput] = useState("");
 
-  const [habitTitle, setHabitTitle] = useState("每日复盘 30 分钟");
+  const [habitTitle, setHabitTitle] = useState("");
   const [habitStartAt, setHabitStartAt] = useState(initialHabitWindow.startAt);
   const [habitEndAt, setHabitEndAt] = useState(initialHabitWindow.endAt);
   const [habitPreset, setHabitPreset] = useState<HabitPreset>("DAILY");
+  const [habitCategoryTag, setHabitCategoryTag] = useState<CategoryTag>("WORK");
+  const [habitCustomTagsInput, setHabitCustomTagsInput] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,6 +80,9 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
 
   const createTask = useMutation({
     mutationFn: async () => {
+      if (!taskTitle.trim()) {
+        throw new Error("请先输入任务名称");
+      }
       const startAtIso = toIso(taskStartAt);
       const endAtIso = toIso(taskEndAt);
       if (new Date(endAtIso) <= new Date(startAtIso)) {
@@ -73,13 +92,15 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
       return apiFetch("/api/tasks", {
         method: "POST",
         body: JSON.stringify({
-          title: taskTitle,
+          title: taskTitle.trim(),
           estimateMinutes: Math.max(15, Math.round((new Date(endAtIso).getTime() - new Date(startAtIso).getTime()) / 60_000)),
           startAt: startAtIso,
           endAt: endAtIso,
           dueAt: toIso(taskDueAt),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-          priority: taskPriority
+          priority: taskPriority,
+          categoryTag: taskCategoryTag,
+          customTags: parseCustomTags(taskCustomTagsInput)
         })
       });
     },
@@ -95,6 +116,9 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
 
   const createHabit = useMutation({
     mutationFn: async () => {
+      if (!habitTitle.trim()) {
+        throw new Error("请先输入习惯名称");
+      }
       const startAtIso = toIso(habitStartAt);
       const endAtIso = toIso(habitEndAt);
       if (new Date(endAtIso) <= new Date(startAtIso)) {
@@ -104,13 +128,15 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
       return apiFetch("/api/habits", {
         method: "POST",
         body: JSON.stringify({
-          title: habitTitle,
+          title: habitTitle.trim(),
           startAt: startAtIso,
           endAt: endAtIso,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
           rrule: habitRuleFromPreset(habitPreset),
           minDurationMinutes: Math.max(15, Math.round((new Date(endAtIso).getTime() - new Date(startAtIso).getTime()) / 60_000)),
-          priority: "P3"
+          priority: "P3",
+          categoryTag: habitCategoryTag,
+          customTags: parseCustomTags(habitCustomTagsInput)
         })
       });
     },
@@ -130,7 +156,9 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
           startAt: toIso(taskEndAt),
           durationMinutes: 90,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-          priority: "P2"
+          priority: "P2",
+          categoryTag: "DEEP_WORK",
+          customTags: ["自动生成"]
         })
       }),
     onSuccess: () => {
@@ -158,7 +186,11 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
       <CardContent className="space-y-4">
         <form onSubmit={onTaskSubmit} className="space-y-2 rounded-lg border border-slate-200 p-3">
           <div className="text-xs font-medium uppercase text-slate-500">{copy.task}</div>
-          <Input value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} />
+          <Input
+            value={taskTitle}
+            onChange={(event) => setTaskTitle(event.target.value)}
+            placeholder="输入任务名称，例如：完成需求文档"
+          />
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="text-xs text-slate-600">
@@ -190,6 +222,30 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
             </select>
           </label>
 
+          <label className="block text-xs text-slate-600">
+            类别标签
+            <select
+              className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-sm"
+              value={taskCategoryTag}
+              onChange={(event) => setTaskCategoryTag(event.target.value as CategoryTag)}
+            >
+              {CATEGORY_TAG_OPTIONS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block text-xs text-slate-600">
+            个性化标签（逗号分隔）
+            <Input
+              value={taskCustomTagsInput}
+              onChange={(event) => setTaskCustomTagsInput(event.target.value)}
+              placeholder="例如：期末冲刺, 认证考试"
+            />
+          </label>
+
           <Button type="submit" variant="secondary" className="w-full" disabled={createTask.isPending}>
             {createTask.isPending ? copy.manualCreating : copy.addTask}
           </Button>
@@ -197,7 +253,11 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
 
         <form onSubmit={onHabitSubmit} className="space-y-2 rounded-lg border border-slate-200 p-3">
           <div className="text-xs font-medium uppercase text-slate-500">{copy.habit}</div>
-          <Input value={habitTitle} onChange={(event) => setHabitTitle(event.target.value)} />
+          <Input
+            value={habitTitle}
+            onChange={(event) => setHabitTitle(event.target.value)}
+            placeholder="输入习惯名称，例如：英语听力 45 分钟"
+          />
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="text-xs text-slate-600">
@@ -221,6 +281,30 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
               <option value="WEEKDAY">工作日</option>
               <option value="WEEKLY">每周</option>
             </select>
+          </label>
+
+          <label className="block text-xs text-slate-600">
+            类别标签
+            <select
+              className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-sm"
+              value={habitCategoryTag}
+              onChange={(event) => setHabitCategoryTag(event.target.value as CategoryTag)}
+            >
+              {CATEGORY_TAG_OPTIONS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block text-xs text-slate-600">
+            个性化标签（逗号分隔）
+            <Input
+              value={habitCustomTagsInput}
+              onChange={(event) => setHabitCustomTagsInput(event.target.value)}
+              placeholder="例如：晨间例行, 自我提升"
+            />
           </label>
 
           <Button type="submit" variant="secondary" className="w-full" disabled={createHabit.isPending}>

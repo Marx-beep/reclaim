@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +26,13 @@ type AnalyticsResponse = {
     personalMinutes: number;
     otherMinutes: number;
   };
+  categoryTagTotals: Record<string, number>;
+  categoryTagBreakdown: Array<{
+    key: string;
+    label: string;
+    minutes: number;
+    percent: number;
+  }>;
   focusVsShallow: {
     focusMinutes: number;
     shallowMinutes: number;
@@ -127,6 +134,27 @@ export default function AnalyticsPage() {
         <TimeTrendBars title={copy.trendTitle} data={data?.trend ?? []} />
       </div>
 
+      <Card>
+        <CardTitle>类别标签时间记录</CardTitle>
+        <CardContent>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {(data?.categoryTagBreakdown ?? []).length === 0 ? (
+              <div className="text-sm text-slate-500">暂无类别标签记录</div>
+            ) : (
+              (data?.categoryTagBreakdown ?? []).map((item) => (
+                <div key={item.key} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                  <div className="text-sm font-medium text-slate-900">{item.label}</div>
+                  <div className="text-xs text-slate-600">{toHours(item.minutes)}h</div>
+                  <div className="mt-1 h-1.5 w-full rounded bg-slate-200">
+                    <div className="h-full rounded bg-sky-500" style={{ width: `${Math.round(item.percent * 100)}%` }} />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
         <Card>
           <CardTitle>{copy.habitsTasksTitle}</CardTitle>
@@ -208,4 +236,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 type BreakdownItem = {
   key: string;
@@ -65,4 +65,3 @@ export function DonutBreakdown({
     </div>
   );
 }
-

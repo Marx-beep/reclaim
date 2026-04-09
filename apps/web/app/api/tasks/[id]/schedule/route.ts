@@ -1,22 +1,20 @@
-﻿import { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { getOrCreateCurrentUserId } from "@/lib/auth/session";
 import { prisma } from "@/lib/server/db";
 import { ok, fail } from "@/lib/api/response";
 import { recomputeWindowSafely } from "@/lib/server/recompute";
+import { buildTagMetadata, CATEGORY_TAG_VALUES, normalizeCustomTags } from "@/lib/tags/time-categories";
 
 const scheduleTaskSchema = z.object({
   startAt: z.string().datetime(),
   endAt: z.string().datetime(),
   timezone: z.string().min(1).optional(),
-  tags: z.array(z.string().min(1).max(24)).max(10).optional()
+  // Legacy field kept for compatibility with old clients.
+  tags: z.array(z.string().min(1).max(24)).max(12).optional(),
+  customTags: z.array(z.string().min(1).max(24)).max(12).optional(),
+  categoryTag: z.enum(CATEGORY_TAG_VALUES).optional()
 });
-
-function normalizeTags(tags: string[] | undefined) {
-  if (!tags) return [] as string[];
-  const cleaned = tags.map((item) => item.trim()).filter(Boolean);
-  return Array.from(new Set(cleaned));
-}
 
 export async function PATCH(
   request: Request,
@@ -42,11 +40,12 @@ export async function PATCH(
       return fail("End time must be after start time");
     }
 
-    const tags = normalizeTags(payload.tags);
+    const customTags = normalizeCustomTags(payload.customTags ?? payload.tags);
     const previousMetadata =
       typeof task.smartEvent.metadata === "object" && task.smartEvent.metadata
         ? (task.smartEvent.metadata as Record<string, unknown>)
         : {};
+    const categoryTag = payload.categoryTag ?? (previousMetadata.categoryTag as string | undefined) ?? "WORK";
 
     const updatedEvent = await prisma.smartEvent.update({
       where: { id: task.smartEventId },
@@ -55,11 +54,17 @@ export async function PATCH(
         endAt,
         timezone: payload.timezone ?? task.smartEvent.timezone,
         lockState: "BUSY",
-        metadata: {
-          ...previousMetadata,
-          tags,
-          scheduledFrom: "calendar-slot"
-        } as Prisma.InputJsonValue
+        metadata: buildTagMetadata(
+          {
+            ...previousMetadata,
+            scheduledFrom: "calendar-slot"
+          },
+          {
+            categoryTag,
+            customTags,
+            fallbackCategory: "WORK"
+          }
+        ) as Prisma.InputJsonValue
       }
     });
 
@@ -75,10 +80,14 @@ export async function PATCH(
       smartEventId: updatedEvent.id,
       startAt: updatedEvent.startAt,
       endAt: updatedEvent.endAt,
-      tags,
+      categoryTag,
+      customTags,
+      // Keep legacy response field for clients expecting `tags`.
+      tags: customTags,
       recompute
     });
   } catch (error) {
     return fail(error instanceof Error ? error.message : "Failed to schedule task");
   }
 }
+

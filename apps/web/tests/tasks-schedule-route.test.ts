@@ -43,7 +43,7 @@ describe("PATCH /api/tasks/[id]/schedule", () => {
     expect(response.status).toBe(404);
   });
 
-  it("updates smart event with selected slot and tags", async () => {
+  it("updates smart event with category tag and custom tags", async () => {
     findUnique.mockResolvedValueOnce({
       id: "t_1",
       smartEventId: "evt_1",
@@ -71,6 +71,7 @@ describe("PATCH /api/tasks/[id]/schedule", () => {
         body: JSON.stringify({
           startAt: "2026-04-10T02:00:00.000Z",
           endAt: "2026-04-10T03:30:00.000Z",
+          categoryTag: "STUDY",
           tags: ["深度工作", "深度工作", "复盘"]
         })
       }),
@@ -80,6 +81,12 @@ describe("PATCH /api/tasks/[id]/schedule", () => {
     const body = await response.json();
     expect(response.status).toBe(200);
     expect(update).toHaveBeenCalledTimes(1);
+    expect(body.categoryTag).toBe("STUDY");
+    expect(body.customTags).toEqual(["深度工作", "复盘"]);
     expect(body.tags).toEqual(["深度工作", "复盘"]);
+
+    const payload = update.mock.calls[0][0].data.metadata;
+    expect(payload.categoryTag).toBe("STUDY");
+    expect(payload.customTags).toEqual(["深度工作", "复盘"]);
   });
 });

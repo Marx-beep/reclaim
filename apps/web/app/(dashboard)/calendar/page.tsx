@@ -8,6 +8,7 @@ import { EventDetailDrawer } from "@/components/dashboard/event-detail-drawer";
 import { QuickCreatePanel } from "@/components/dashboard/quick-create";
 import { ScheduleImportPanel } from "@/components/dashboard/schedule-import-panel";
 import { apiFetch } from "@/lib/api/client";
+import { CATEGORY_TAG_OPTIONS, normalizeCategoryTag, type CategoryTag } from "@/lib/tags/time-categories";
 
 type TaskRecord = {
   id: string;
@@ -15,6 +16,7 @@ type TaskRecord = {
     title: string;
     status: "DRAFT" | "SCHEDULED" | "IN_PROGRESS" | "DONE" | "CANCELLED" | "MISSED";
     dueAt: string | null;
+    metadata?: Record<string, unknown> | null;
   };
 };
 
@@ -27,7 +29,7 @@ function toIso(input: string) {
   return new Date(input).toISOString();
 }
 
-function parseTags(input: string) {
+function parseCustomTags(input: string) {
   return input
     .split(/[,，]/)
     .map((tag) => tag.trim())
@@ -43,7 +45,8 @@ export default function CalendarWorkspacePage() {
   const [selectedTaskId, setSelectedTaskId] = useState("");
   const [slotStart, setSlotStart] = useState(toLocalInputValue(new Date(Date.now() + 60 * 60_000)));
   const [slotEnd, setSlotEnd] = useState(toLocalInputValue(new Date(Date.now() + 120 * 60_000)));
-  const [tagInput, setTagInput] = useState("");
+  const [categoryTag, setCategoryTag] = useState<CategoryTag>("WORK");
+  const [customTagInput, setCustomTagInput] = useState("");
   const [schedulerFeedback, setSchedulerFeedback] = useState<string | null>(null);
 
   const eventsQuery = useQuery({
@@ -99,6 +102,22 @@ export default function CalendarWorkspacePage() {
     }
   }, [schedulerOpen, selectableTasks, selectedTaskId]);
 
+  useEffect(() => {
+    if (!selectedTaskId) return;
+    const selectedTask = selectableTasks.find((item) => item.id === selectedTaskId);
+    if (!selectedTask) return;
+    const metadata =
+      typeof selectedTask.smartEvent.metadata === "object" && selectedTask.smartEvent.metadata
+        ? (selectedTask.smartEvent.metadata as Record<string, unknown>)
+        : null;
+    const presetCategory = normalizeCategoryTag(typeof metadata?.categoryTag === "string" ? metadata.categoryTag : undefined, "WORK");
+    const presetCustomTags = Array.isArray(metadata?.customTags)
+      ? metadata.customTags.filter((item): item is string => typeof item === "string")
+      : [];
+    setCategoryTag(presetCategory);
+    setCustomTagInput(presetCustomTags.join(", "));
+  }, [selectedTaskId, selectableTasks]);
+
   const scheduleTask = useMutation({
     mutationFn: async () => {
       if (!selectedTaskId) throw new Error("请先选择任务");
@@ -114,7 +133,8 @@ export default function CalendarWorkspacePage() {
         body: JSON.stringify({
           startAt: startAtIso,
           endAt: endAtIso,
-          tags: parseTags(tagInput),
+          categoryTag,
+          customTags: parseCustomTags(customTagInput),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
         })
       });
@@ -122,7 +142,7 @@ export default function CalendarWorkspacePage() {
     onSuccess: async () => {
       setSchedulerFeedback("任务已安排到选定时间段");
       setSchedulerOpen(false);
-      setTagInput("");
+      setCustomTagInput("");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["events"] }),
         queryClient.invalidateQueries({ queryKey: ["tasks"] })
@@ -206,13 +226,28 @@ export default function CalendarWorkspacePage() {
               </div>
 
               <label className="block text-xs text-slate-600">
-                标签（逗号分隔）
+                类别标签
+                <select
+                  className="mt-1 h-10 w-full rounded-md border border-slate-300 px-2 text-sm"
+                  value={categoryTag}
+                  onChange={(event) => setCategoryTag(event.target.value as CategoryTag)}
+                >
+                  {CATEGORY_TAG_OPTIONS.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-xs text-slate-600">
+                个性化标签（逗号分隔）
                 <input
                   type="text"
                   className="mt-1 h-10 w-full rounded-md border border-slate-300 px-2 text-sm"
                   placeholder="例如：深度工作, 客户交付"
-                  value={tagInput}
-                  onChange={(event) => setTagInput(event.target.value)}
+                  value={customTagInput}
+                  onChange={(event) => setCustomTagInput(event.target.value)}
                 />
               </label>
 

@@ -1,9 +1,10 @@
-import { Prisma, type SmartEvent } from "@prisma/client";
+﻿import { Prisma, type SmartEvent } from "@prisma/client";
 import { Temporal } from "@js-temporal/polyfill";
 import { expandOccurrences } from "@reclaim/recurrence";
 import { getOrCreateCurrentUserId } from "@/lib/auth/session";
 import { prisma } from "@/lib/server/db";
 import { ok } from "@/lib/api/response";
+import { CATEGORY_TAG_OPTIONS, categoryTagLabel, normalizeCategoryTag, type CategoryTag } from "@/lib/tags/time-categories";
 
 type BucketKey = "focus" | "meeting" | "task" | "habit" | "buffer" | "personal" | "other";
 
@@ -25,6 +26,8 @@ type DaySegment = {
   end: Temporal.Instant;
   minutes: number;
 };
+
+type CategoryTagTotals = Record<CategoryTag, number>;
 
 function clampInstant(value: Temporal.Instant, min: Temporal.Instant, max: Temporal.Instant) {
   const afterMin = Temporal.Instant.compare(value, min) < 0 ? min : value;
@@ -72,8 +75,26 @@ function parseClock(time: string) {
   };
 }
 
+function emptyCategoryTagTotals(): CategoryTagTotals {
+  return CATEGORY_TAG_OPTIONS.reduce((acc, item) => {
+    acc[item.value] = 0;
+    return acc;
+  }, {} as CategoryTagTotals);
+}
+
+function toMetadata(event: Pick<SmartEvent, "metadata">) {
+  return typeof event.metadata === "object" && event.metadata ? (event.metadata as Record<string, unknown>) : null;
+}
+
 function categorizeEvent(event: Pick<SmartEvent, "type" | "metadata">): BucketKey {
-  const metadata = typeof event.metadata === "object" && event.metadata ? (event.metadata as Record<string, unknown>) : null;
+  const metadata = toMetadata(event);
+  const categoryTag = normalizeCategoryTag(typeof metadata?.categoryTag === "string" ? metadata.categoryTag : undefined, "OTHER");
+
+  if (categoryTag === "MEETING") return "meeting";
+  if (categoryTag === "DEEP_WORK") return "focus";
+  if (categoryTag === "PERSONAL" || categoryTag === "FAMILY" || categoryTag === "SOCIAL" || categoryTag === "REST") {
+    return "personal";
+  }
   if (metadata?.category === "PERSONAL") return "personal";
 
   switch (event.type) {
@@ -91,6 +112,26 @@ function categorizeEvent(event: Pick<SmartEvent, "type" | "metadata">): BucketKe
       return "personal";
     default:
       return "other";
+  }
+}
+
+function resolveEventCategoryTag(event: Pick<SmartEvent, "type" | "metadata">): CategoryTag {
+  const metadata = toMetadata(event);
+  const metadataCategory = normalizeCategoryTag(typeof metadata?.categoryTag === "string" ? metadata.categoryTag : undefined, "OTHER");
+  if (metadataCategory !== "OTHER") return metadataCategory;
+
+  switch (event.type) {
+    case "FOCUS":
+      return "DEEP_WORK";
+    case "MEETING":
+      return "MEETING";
+    case "TASK":
+    case "HABIT":
+      return "WORK";
+    case "PTO":
+      return "PERSONAL";
+    default:
+      return "OTHER";
   }
 }
 
@@ -121,7 +162,7 @@ function buildInsights(input: {
       id: "meeting-heavy",
       level: "warn",
       title: "会议占比偏高",
-      detail: "建议设置无会时段，并把低优先级沟通迁移到异步更新。"
+      detail: "建议设置无会时段，并把低优先级沟通转移到异步更新。"
     });
   }
 
@@ -246,6 +287,7 @@ export async function GET(request: Request) {
     personal: 0,
     other: 0
   };
+  const categoryTagTotals = emptyCategoryTagTotals();
 
   let overtimeMinutes = 0;
   let taskCreated = 0;
@@ -261,8 +303,10 @@ export async function GET(request: Request) {
     if (Temporal.Instant.compare(start, end) >= 0) continue;
 
     const category = categorizeEvent(event);
+    const categoryTag = resolveEventCategoryTag(event);
     const minutes = Math.max(0, Math.round((end.epochMilliseconds - start.epochMilliseconds) / 60_000));
     totals[category] += minutes;
+    categoryTagTotals[categoryTag] += minutes;
 
     if (event.type === "TASK") {
       taskCreated += 1;
@@ -294,21 +338,27 @@ export async function GET(request: Request) {
           continue;
         }
 
-        const workStartInstant = dayStart.toPlainDate().toZonedDateTime({
-          timeZone: timezone,
-          plainTime: {
-            hour: workdayStart.hour,
-            minute: workdayStart.minute
-          }
-        }).toInstant();
+        const workStartInstant = dayStart
+          .toPlainDate()
+          .toZonedDateTime({
+            timeZone: timezone,
+            plainTime: {
+              hour: workdayStart.hour,
+              minute: workdayStart.minute
+            }
+          })
+          .toInstant();
 
-        const workEndInstant = dayStart.toPlainDate().toZonedDateTime({
-          timeZone: timezone,
-          plainTime: {
-            hour: workdayEnd.hour,
-            minute: workdayEnd.minute
-          }
-        }).toInstant();
+        const workEndInstant = dayStart
+          .toPlainDate()
+          .toZonedDateTime({
+            timeZone: timezone,
+            plainTime: {
+              hour: workdayEnd.hour,
+              minute: workdayEnd.minute
+            }
+          })
+          .toInstant();
 
         const inWorkMinutes = overlapMinutes(segment.start, segment.end, workStartInstant, workEndInstant);
         overtimeMinutes += Math.max(0, segment.minutes - inWorkMinutes);
@@ -342,6 +392,16 @@ export async function GET(request: Request) {
     percent: totalScheduledMinutes > 0 ? item.minutes / totalScheduledMinutes : 0
   }));
 
+  const categoryTagBreakdown = Object.entries(categoryTagTotals)
+    .map(([key, minutes]) => ({
+      key,
+      label: categoryTagLabel(key),
+      minutes,
+      percent: totalScheduledMinutes > 0 ? minutes / totalScheduledMinutes : 0
+    }))
+    .filter((item) => item.minutes > 0)
+    .sort((a, b) => b.minutes - a.minutes);
+
   const trend = Array.from(trendMap.values());
   const insights = buildInsights({
     focusMinutes,
@@ -372,6 +432,7 @@ export async function GET(request: Request) {
         utilization,
         payload: {
           breakdown,
+          categoryTagBreakdown,
           trend,
           insights
         } as Prisma.InputJsonValue
@@ -389,6 +450,7 @@ export async function GET(request: Request) {
         utilization,
         payload: {
           breakdown,
+          categoryTagBreakdown,
           trend,
           insights
         } as Prisma.InputJsonValue
@@ -419,6 +481,8 @@ export async function GET(request: Request) {
       personalMinutes,
       otherMinutes: totals.other
     },
+    categoryTagTotals,
+    categoryTagBreakdown,
     focusVsShallow: {
       focusMinutes,
       shallowMinutes,
@@ -429,4 +493,3 @@ export async function GET(request: Request) {
     insights
   });
 }
-

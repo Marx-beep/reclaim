@@ -1,9 +1,11 @@
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { validateRRule } from "@reclaim/recurrence";
 import { getOrCreateCurrentUserId } from "@/lib/auth/session";
 import { prisma } from "@/lib/server/db";
 import { ok, fail } from "@/lib/api/response";
 import { recomputeWindowSafely } from "@/lib/server/recompute";
+import { buildTagMetadata, CATEGORY_TAG_VALUES, normalizeCustomTags } from "@/lib/tags/time-categories";
 
 const schema = z.object({
   title: z.string().min(1),
@@ -13,7 +15,9 @@ const schema = z.object({
   rrule: z.string(),
   minDurationMinutes: z.number().int().min(5),
   targetPerWeek: z.number().int().min(1).max(14).optional(),
-  priority: z.enum(["P1", "P2", "P3", "P4"]).default("P3")
+  priority: z.enum(["P1", "P2", "P3", "P4"]).default("P3"),
+  categoryTag: z.enum(CATEGORY_TAG_VALUES).optional(),
+  customTags: z.array(z.string().min(1).max(24)).max(12).optional()
 });
 
 export async function GET() {
@@ -34,6 +38,7 @@ export async function POST(request: Request) {
     }
 
     const userId = await getOrCreateCurrentUserId();
+    const customTags = normalizeCustomTags(parsed.customTags);
 
     const habit = await prisma.$transaction(async (tx) => {
       const event = await tx.smartEvent.create({
@@ -46,7 +51,12 @@ export async function POST(request: Request) {
           timezone: parsed.timezone,
           recurrenceRule: parsed.rrule,
           priority: parsed.priority,
-          flexibility: "SEMI_FLEXIBLE"
+          flexibility: "SEMI_FLEXIBLE",
+          metadata: buildTagMetadata(undefined, {
+            categoryTag: parsed.categoryTag,
+            customTags,
+            fallbackCategory: "WORK"
+          }) as Prisma.InputJsonValue
         }
       });
 
