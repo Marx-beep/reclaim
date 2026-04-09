@@ -53,8 +53,8 @@ scripts\\windows\\start-maintenance.cmd
 
 ## 关键页面
 
-- 仪表盘：`/`
-- 日历：`/calendar`
+- 仪表盘（四象限任务视图）：`/`
+- 日历工作台（框选时间段后弹窗安排任务+标签）：`/calendar`
 - 预约链接：`/links`
 - 分析：`/analytics`
 - 设置：`/settings`
@@ -68,6 +68,7 @@ scripts\\windows\\start-maintenance.cmd
 - `/api/calendars/sync`
 - `/api/events`
 - `/api/tasks`
+- `/api/tasks/[id]/schedule`
 - `/api/habits`
 - `/api/focus`
 - `/api/scheduling/recompute`
