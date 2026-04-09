@@ -1,0 +1,26 @@
+﻿node_modules
+.pnpm-store
+.next
+.turbo
+.runtime
+dist
+coverage
+.env
+.env.local
+*.log
+*.pid
+*.tsbuildinfo
+__pycache__
+.pytest_cache
+.ruff_cache
+
+# Desktop artifacts
+apps/desktop/dist
+app-use/*.exe
+app-use/*.zip
+
+# Embedded/runtime artifacts
+services/scheduler/Python/
+
+# Optional generated delivery folder
+# app-use/

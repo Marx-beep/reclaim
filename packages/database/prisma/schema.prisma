@@ -1,0 +1,627 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CalendarProvider {
+  GOOGLE
+  OUTLOOK
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  REVOKED
+  ERROR
+  PENDING
+}
+
+enum SmartEventType {
+  TASK
+  HABIT
+  FOCUS
+  MEETING
+  BUFFER
+  LINK_HOLD
+  PTO
+}
+
+enum SmartEventPriority {
+  P1
+  P2
+  P3
+  P4
+}
+
+enum SmartEventStatus {
+  DRAFT
+  SCHEDULED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+  MISSED
+}
+
+enum Flexibility {
+  FLEXIBLE
+  SEMI_FLEXIBLE
+  FIXED
+}
+
+enum LockState {
+  FREE
+  BUSY
+  SOFT_LOCKED
+  HARD_LOCKED
+}
+
+enum EventSource {
+  INTERNAL
+  GOOGLE
+  OUTLOOK
+}
+
+enum EnergyProfile {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum SchedulingDecisionType {
+  KEEP
+  MOVE
+  SPLIT
+  UNSCHEDULE
+  LOCK_UPGRADE
+  LOCK_DOWNGRADE
+}
+
+enum RescheduleTriggerType {
+  MANUAL
+  CALENDAR_SYNC
+  USER_CHANGE
+  POLICY_CHANGE
+  WEBHOOK
+  SYSTEM
+}
+
+enum RescheduleJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  PARTIAL
+}
+
+enum ConstraintKind {
+  DEADLINE
+  WORK_HOUR
+  AVAILABILITY
+  BUFFER
+  LOCK
+  CONTEXT_SWITCH
+  STABILITY
+  CUSTOM
+}
+
+enum AvailabilityRuleType {
+  AVAILABLE
+  UNAVAILABLE
+  NO_MEETING
+}
+
+enum WorkHourKind {
+  WORK
+  PERSONAL
+  DEEP_WORK
+}
+
+enum AuditActorType {
+  USER
+  SYSTEM
+  WORKER
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  timezone      String   @default("UTC")
+  locale        String   @default("en-US")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  accounts              Account[]
+  sessions              Session[]
+  calendarConnections   CalendarConnection[]
+  externalCalendars     ExternalCalendar[]
+  externalEventMirrors  ExternalEventMirror[]
+  smartEvents           SmartEvent[]
+  meetingTemplates      MeetingTemplate[]
+  schedulingLinks       SchedulingLink[]
+  bufferRules           BufferRule[]
+  availabilityRules     AvailabilityRule[]
+  workHourRules         WorkHourRule[]
+  timePolicy            TimePolicy?
+  schedulingConstraints SchedulingConstraint[]
+  schedulingDecisions   SchedulingDecision[]
+  rescheduleJobs        RescheduleJob[]
+  analyticsSnapshots    AnalyticsSnapshot[]
+  auditLogs             AuditLog[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@index([expires])
+}
+
+model CalendarConnection {
+  id              String           @id @default(cuid())
+  userId          String
+  provider        CalendarProvider
+  status          ConnectionStatus @default(PENDING)
+  accountEmail    String?
+  scopes          String[]
+  accessTokenEnc  String?
+  refreshTokenEnc String?
+  tokenExpiresAt  DateTime?
+  syncCursor      String?
+  lastSyncedAt    DateTime?
+  lastWebhookAt   DateTime?
+  lastError       String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  externalCalendars ExternalCalendar[]
+
+  @@unique([userId, provider, accountEmail])
+  @@index([userId, provider, status])
+}
+
+model ExternalCalendar {
+  id                        String  @id @default(cuid())
+  userId                    String
+  connectionId              String
+  providerCalendarId        String
+  name                      String
+  timezone                  String
+  color                     String?
+  isPrimary                 Boolean @default(false)
+  isReadOnly                Boolean @default(false)
+  isSelectedForSync         Boolean @default(true)
+  isSelectedForScheduling   Boolean @default(true)
+  syncToken                 String?
+  lastSyncedAt              DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connection CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  smartEvents SmartEvent[]
+  mirrors    ExternalEventMirror[]
+
+  @@unique([connectionId, providerCalendarId])
+  @@index([userId, isSelectedForScheduling])
+}
+
+model ExternalEventMirror {
+  id                 String   @id @default(cuid())
+  userId             String
+  externalCalendarId String
+  smartEventId       String   @unique
+  externalEventId    String
+  etag               String?
+  externalUpdatedAt  DateTime?
+  rawPayload         Json?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  externalCalendar ExternalCalendar @relation(fields: [externalCalendarId], references: [id], onDelete: Cascade)
+  smartEvent       SmartEvent       @relation(fields: [smartEventId], references: [id], onDelete: Cascade)
+
+  @@unique([externalCalendarId, externalEventId])
+  @@index([userId, externalUpdatedAt])
+}
+
+model SmartEvent {
+  id             String             @id @default(cuid())
+  userId         String
+  calendarId     String?
+  parentEventId  String?
+  type           SmartEventType
+  title          String
+  description    String?
+  startAt        DateTime
+  endAt          DateTime
+  timezone       String
+  priority       SmartEventPriority @default(P3)
+  status         SmartEventStatus   @default(SCHEDULED)
+  flexibility    Flexibility        @default(FLEXIBLE)
+  lockState      LockState          @default(FREE)
+  source         EventSource        @default(INTERNAL)
+  recurrenceRule String?
+  dueAt          DateTime?
+  energyProfile  EnergyProfile?
+  isAllDay       Boolean            @default(false)
+  metadata       Json?
+  softLockAt     DateTime?
+  hardLockAt     DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calendar     ExternalCalendar? @relation(fields: [calendarId], references: [id], onDelete: SetNull)
+  parentEvent  SmartEvent?       @relation("RecurringChain", fields: [parentEventId], references: [id], onDelete: SetNull)
+  childEvents  SmartEvent[]      @relation("RecurringChain")
+
+  mirror         ExternalEventMirror?
+  task           Task?
+  habit          Habit?
+  focusBlock     FocusBlock?
+  meetingTemplate MeetingTemplate?
+  constraints    SchedulingConstraint[]
+  decisions      SchedulingDecision[]
+
+  @@index([userId, startAt, endAt])
+  @@index([userId, dueAt, priority])
+  @@index([userId, lockState, startAt])
+  @@index([calendarId, startAt, endAt])
+  @@index([type, status])
+}
+
+model Task {
+  id               String @id @default(cuid())
+  smartEventId     String @unique
+  estimateMinutes  Int
+  remainingMinutes Int?
+  effortScore      Int    @default(1)
+  autoSchedule     Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  smartEvent SmartEvent @relation(fields: [smartEventId], references: [id], onDelete: Cascade)
+
+  @@index([estimateMinutes])
+}
+
+model Habit {
+  id                 String @id @default(cuid())
+  smartEventId       String @unique
+  rrule              String
+  targetPerWeek      Int?
+  minDurationMinutes Int
+  maxDurationMinutes Int?
+  anchorPreference   String?
+  lastExpandedAt     DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  smartEvent SmartEvent @relation(fields: [smartEventId], references: [id], onDelete: Cascade)
+
+  @@index([lastExpandedAt])
+}
+
+model FocusBlock {
+  id               String @id @default(cuid())
+  smartEventId     String @unique
+  minBlockMinutes  Int    @default(30)
+  maxBlockMinutes  Int    @default(120)
+  requiresDeepWork Boolean @default(true)
+  contextTag       String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  smartEvent SmartEvent @relation(fields: [smartEventId], references: [id], onDelete: Cascade)
+}
+
+model MeetingTemplate {
+  id                     String  @id @default(cuid())
+  userId                 String
+  smartEventId           String? @unique
+  title                  String
+  description            String?
+  defaultDurationMinutes Int
+  locationType           String  @default("video")
+  conferenceProvider     String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  smartEvent SmartEvent? @relation(fields: [smartEventId], references: [id], onDelete: SetNull)
+  links      SchedulingLink[]
+
+  @@index([userId, defaultDurationMinutes])
+}
+
+model SchedulingLink {
+  id                 String @id @default(cuid())
+  userId             String
+  meetingTemplateId  String
+  slug               String @unique
+  title              String
+  durationMinutes    Int
+  noticeMinutes      Int    @default(120)
+  minSchedulingHours Int    @default(12)
+  maxSchedulingDays  Int    @default(30)
+  isActive           Boolean @default(true)
+  metadata           Json?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meetingTemplate MeetingTemplate @relation(fields: [meetingTemplateId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+}
+
+model BufferRule {
+  id            String @id @default(cuid())
+  userId        String
+  name          String
+  appliesTo     SmartEventType[]
+  beforeMinutes Int     @default(0)
+  afterMinutes  Int     @default(0)
+  enabled       Boolean @default(true)
+  priority      Int     @default(1)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, enabled, priority])
+}
+
+model AvailabilityRule {
+  id            String               @id @default(cuid())
+  userId        String
+  name          String
+  dayOfWeek     Int
+  startTime     String
+  endTime       String
+  timezone      String
+  ruleType      AvailabilityRuleType
+  priority      Int                  @default(1)
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+  enabled       Boolean              @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, dayOfWeek, enabled, priority])
+}
+
+model WorkHourRule {
+  id        String @id @default(cuid())
+  userId    String
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  timezone  String
+  kind      WorkHourKind @default(WORK)
+  enabled   Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, dayOfWeek, kind, enabled])
+}
+
+model TimePolicy {
+  id                         String @id @default(cuid())
+  userId                     String @unique
+  defaultTimezone            String
+  workdayStart               String @default("09:00")
+  workdayEnd                 String @default("18:00")
+  maxMeetingsPerDay          Int    @default(6)
+  focusTargetMinutesPerDay   Int    @default(120)
+  softLockLeadHours          Int    @default(24)
+  hardLockLeadHours          Int    @default(4)
+  allowOvertime              Boolean @default(false)
+  noMeetingWeekdays          Int[]
+  defaultBufferBeforeMinutes Int    @default(5)
+  defaultBufferAfterMinutes  Int    @default(5)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SchedulingConstraint {
+  id           String @id @default(cuid())
+  userId       String
+  smartEventId String?
+  kind         ConstraintKind
+  name         String
+  isHard       Boolean @default(false)
+  weight       Float   @default(1)
+  payload      Json
+  enabled      Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  smartEvent SmartEvent? @relation(fields: [smartEventId], references: [id], onDelete: Cascade)
+
+  @@index([userId, enabled, kind])
+  @@index([smartEventId, enabled])
+}
+
+model RescheduleJob {
+  id           String @id @default(cuid())
+  userId       String
+  triggerType  RescheduleTriggerType
+  triggerRef   String?
+  windowStart  DateTime
+  windowEnd    DateTime
+  status       RescheduleJobStatus @default(QUEUED)
+  attempt      Int     @default(0)
+  requestedAt  DateTime @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  errorMessage String?
+  inputDigest  String?
+  stats        Json?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  decisions SchedulingDecision[]
+
+  @@index([userId, status, requestedAt])
+  @@index([windowStart, windowEnd])
+}
+
+model SchedulingDecision {
+  id              String @id @default(cuid())
+  userId          String
+  smartEventId    String
+  rescheduleJobId String?
+  decisionType    SchedulingDecisionType
+  previousStartAt DateTime?
+  previousEndAt   DateTime?
+  newStartAt      DateTime?
+  newEndAt        DateTime?
+  scoreDelta      Float?
+  reason          Json
+  reasonText      String
+  explainVersion  Int @default(1)
+
+  createdAt DateTime @default(now())
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  smartEvent    SmartEvent    @relation(fields: [smartEventId], references: [id], onDelete: Cascade)
+  rescheduleJob RescheduleJob? @relation(fields: [rescheduleJobId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([smartEventId, createdAt])
+  @@index([rescheduleJobId])
+}
+
+model AnalyticsSnapshot {
+  id              String @id @default(cuid())
+  userId          String
+  periodStart     DateTime
+  periodEnd       DateTime
+  timezone        String
+  focusMinutes    Int    @default(0)
+  meetingMinutes  Int    @default(0)
+  taskCompleted   Int    @default(0)
+  taskCreated     Int    @default(0)
+  overtimeMinutes Int    @default(0)
+  utilization     Float  @default(0)
+  payload         Json?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, periodStart, periodEnd])
+  @@index([userId, periodStart])
+}
+
+model AuditLog {
+  id         String @id @default(cuid())
+  userId     String?
+  actorType  AuditActorType
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([entityType, entityId, createdAt])
+}

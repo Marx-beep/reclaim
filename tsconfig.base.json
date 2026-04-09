@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@reclaim/database": ["packages/database/src/index.ts"],
+      "@reclaim/database/*": ["packages/database/src/*"],
+      "@reclaim/domain": ["packages/domain/src/index.ts"],
+      "@reclaim/domain/*": ["packages/domain/src/*"],
+      "@reclaim/queue": ["packages/queue/src/index.ts"],
+      "@reclaim/queue/*": ["packages/queue/src/*"],
+      "@reclaim/integrations": ["packages/integrations/src/index.ts"],
+      "@reclaim/integrations/*": ["packages/integrations/src/*"],
+      "@reclaim/recurrence": ["packages/recurrence/src/index.ts"],
+      "@reclaim/recurrence/*": ["packages/recurrence/src/*"],
+      "@reclaim/temporal": ["packages/temporal/src/index.ts"],
+      "@reclaim/temporal/*": ["packages/temporal/src/*"],
+      "@reclaim/config": ["packages/config/src/index.ts"],
+      "@reclaim/config/*": ["packages/config/src/*"]
+    }
+  }
+}

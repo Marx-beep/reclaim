@@ -1,0 +1,137 @@
+﻿// Centralized copy dictionary reserved for i18n expansion.
+export const i18n = {
+  "zh-CN": {
+    nav: {
+      dashboard: "仪表盘",
+      calendar: "日历",
+      links: "预约链接",
+      analytics: "分析",
+      settings: "设置",
+      admin: "运维后台"
+    },
+    topBar: {
+      today: "今天",
+      syncReady: "同步就绪",
+      syncCalendars: "同步日历"
+    },
+    dashboard: {
+      todayEvents: "今日事件",
+      loadedEvents: "已加载事件",
+      currentView: "当前视图",
+      currentViewWeek: "周视图",
+      quickCreate: "快速创建",
+      task: "任务",
+      habit: "习惯",
+      addTask: "添加任务",
+      addHabit: "添加习惯",
+      generateFocus: "生成专注时间",
+      suggestions: "智能建议",
+      recompute: "重新计算计划",
+      noSuggestions: "暂无待处理建议",
+      weekSnapshot: "本周快照",
+      focus: "专注时间",
+      meetings: "会议时间",
+      eventDetails: "事件详情",
+      eventTitle: "标题",
+      eventStart: "开始时间",
+      eventEnd: "结束时间",
+      eventMeta: "元数据",
+      noEventSelected: "暂未选择事件",
+      manualCreate: "手动添加计划/事件",
+      manualType: "类型",
+      manualPlan: "计划（任务）",
+      manualEvent: "事件（会议）",
+      manualTitle: "名称",
+      manualDescription: "描述",
+      manualStart: "开始",
+      manualEnd: "结束",
+      manualDue: "截止",
+      manualPriority: "优先级",
+      manualCreatePlan: "添加计划",
+      manualCreateEvent: "添加事件",
+      manualCreating: "提交中...",
+      manualRangeHint: "已从日历选区带入时间，可直接提交或微调。",
+      manualCreated: "已写入日历并触发自动重排。",
+      importSchedule: "时间安排导入",
+      importDescription: "上传图片、PDF、Word（docx）后自动识别时间安排并加入日程。",
+      importPickFile: "选择文件",
+      importPreviewOnly: "仅预览，不写入日历",
+      importRun: "识别并导入",
+      importRunning: "识别中...",
+      importResult: "导入结果",
+      importParsed: "识别条目",
+      importCreated: "新增日程",
+      importSkipped: "未识别行数"
+    },
+    settings: {
+      calendarSync: "日历同步",
+      connectGoogle: "连接 Google",
+      connectOutlook: "连接 Outlook",
+      timePolicy: "时间策略",
+      timezone: "时区",
+      workdayStart: "工作开始时间",
+      workdayEnd: "工作结束时间",
+      softLockLeadHours: "软锁提前小时",
+      hardLockLeadHours: "硬锁提前小时",
+      savePolicy: "保存策略"
+    },
+    analytics: {
+      title: "时间分析",
+      range7: "近 7 天",
+      range14: "近 14 天",
+      deepWork: "深度工作",
+      meetings: "会议时长",
+      taskCompletion: "任务完成率",
+      utilization: "时间利用率",
+      breakdownTitle: "时间分配构成",
+      trendTitle: "时间分配趋势",
+      habitsTasksTitle: "习惯与任务投入",
+      focusVsShallowTitle: "专注 vs 浅层工作",
+      meetingsTitle: "会议概览",
+      workLifeTitle: "工作-生活平衡",
+      insightsTitle: "优化建议",
+      personalHours: "个人时间（小时）",
+      overtimeHours: "加班（小时）",
+      vacationHours: "PTO（小时）"
+    },
+    links: {
+      title: "预约链接",
+      create: "创建链接",
+      slug: "访问路径",
+      duration: "会议时长（分钟）",
+      notice: "最短通知（分钟）",
+      minHours: "最早预约（小时）",
+      maxDays: "最远预约（天）",
+      activeLinks: "现有链接",
+      availability: "可预约时段",
+      linkLabel: "链接",
+      from: "开始",
+      to: "结束",
+      loadAvailability: "加载可用时段",
+      noLinks: "暂无链接，请先创建。",
+      noSlots: "所选窗口暂无可预约时段。",
+      bookFirst: "预约该时段（测试）",
+      booked: "已创建会议与缓冲时间。"
+    },
+    admin: {
+      title: "运维控制台",
+      operations: "运维操作",
+      runSync: "执行日历同步",
+      queueRecompute: "加入重排队列",
+      queueAnalytics: "加入统计队列",
+      queueCleanup: "加入清理队列",
+      recentJobs: "最近重排作业",
+      recentDecisions: "最近调度决策",
+      database: "数据库",
+      scheduler: "调度服务",
+      queue: "队列服务",
+      checking: "检查中..."
+    }
+  }
+} as const;
+
+export const defaultLocale = "zh-CN";
+
+export function t<T extends keyof (typeof i18n)["zh-CN"]>(section: T) {
+  return i18n[defaultLocale][section];
+}

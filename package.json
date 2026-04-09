@@ -1,0 +1,22 @@
+{
+  "name": "reclaim-platform",
+  "private": true,
+  "packageManager": "pnpm@9.12.2",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "pnpm --filter @reclaim/database prisma:generate",
+    "db:migrate": "pnpm --filter @reclaim/database prisma:migrate",
+    "db:seed": "pnpm --filter @reclaim/database seed",
+    "maintenance:start": "cmd /c scripts\\windows\\start-maintenance.cmd",
+    "maintenance:stop": "cmd /c scripts\\windows\\stop-maintenance.cmd",
+    "maintenance:status": "cmd /c scripts\\windows\\status-maintenance.cmd"
+  },
+  "devDependencies": {
+    "turbo": "^2.2.3",
+    "typescript": "^5.6.3"
+  }
+}

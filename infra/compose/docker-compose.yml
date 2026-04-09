@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: reclaim-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: reclaim
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: reclaim-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  scheduler:
+    build:
+      context: ../../services/scheduler
+      dockerfile: Dockerfile
+    container_name: reclaim-scheduler
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8000:8000"
+
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    container_name: reclaim-web
+    restart: unless-stopped
+    env_file:
+      - ../../.env.example
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
+      - scheduler
+
+volumes:
+  pg_data:
