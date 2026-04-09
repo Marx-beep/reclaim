@@ -97,3 +97,21 @@ git rm -r --cached .turbo .next .runtime apps/desktop/dist services/scheduler/Py
 ```
 
 然后重新提交并推送。
+
+## 一键自动修复并推送（Windows）
+
+已内置脚本自动处理以下问题：
+- 连接 `github.com:443` 不稳定时自动重试检测
+- 远端分支领先导致 `fetch first / non-fast-forward` 时自动拉取并合并后再推送
+
+直接运行：
+
+```bat
+scripts\windows\git-sync.cmd
+```
+
+或：
+
+```bash
+npm run git:sync
+```
