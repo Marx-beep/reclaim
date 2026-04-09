@@ -16,8 +16,7 @@ __pycache__
 
 # Desktop artifacts
 apps/desktop/dist
-app-use/*.exe
-app-use/*.zip
+apps/desktop/dist-release
 
 # Embedded/runtime artifacts
 services/scheduler/Python/
