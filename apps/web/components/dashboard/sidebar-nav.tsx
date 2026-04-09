@@ -20,7 +20,7 @@ export function SidebarNav() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-60 border-r border-slate-900 bg-slate-950 p-4">
+    <aside className="hidden h-screen w-60 shrink-0 overflow-y-auto border-r border-slate-900 bg-slate-950 p-4 lg:block">
       <div className="mb-6 text-sm font-semibold text-white">reclaim.ai Planner</div>
       <nav className="space-y-1">
         {items.map((item) => {

@@ -12,11 +12,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   return (
     <AppProviders>
-      <div className="flex min-h-screen bg-slate-50">
+      <div className="flex min-h-screen overflow-hidden bg-slate-50">
         <SidebarNav />
-        <main className="flex min-w-0 flex-1 flex-col">
-          <TopBar onSync={syncCalendars} />
-          <div className="flex-1 p-4">{children}</div>
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="shrink-0">
+            <TopBar onSync={syncCalendars} />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
         </main>
       </div>
     </AppProviders>

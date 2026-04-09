@@ -35,7 +35,11 @@ export function CalendarBoard({
         nowIndicator
         slotMinTime="06:00:00"
         scrollTime="06:00:00"
-        height="auto"
+        allDaySlot={false}
+        slotEventOverlap={false}
+        expandRows
+        stickyHeaderDates
+        height="calc(100vh - 250px)"
         selectable
         selectMirror
         events={events}

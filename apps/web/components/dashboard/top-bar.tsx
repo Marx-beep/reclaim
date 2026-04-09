@@ -9,12 +9,12 @@ import { t } from "@/lib/i18n";
 export function TopBar({ onSync }: { onSync: () => void }) {
   const copy = t("topBar");
   return (
-    <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-      <div>
+    <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
+      <div className="min-w-0">
         <div className="text-xs uppercase tracking-wide text-slate-500">{copy.today}</div>
-        <h1 className="text-lg font-semibold">{format(new Date(), "yyyy年M月d日 EEEE", { locale: zhCN })}</h1>
+        <h1 className="truncate text-lg font-semibold">{format(new Date(), "yyyy年M月d日 EEEE", { locale: zhCN })}</h1>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Badge tone="success">{copy.syncReady}</Badge>
         <Button variant="secondary" onClick={onSync}>
           {copy.syncCalendars}

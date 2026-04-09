@@ -9,6 +9,23 @@
 body {
   @apply bg-background text-foreground antialiased;
   font-family: "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+h1,
+h2,
+h3,
+p,
+span,
+label,
+button,
+a {
+  word-break: break-word;
 }
 
 .fc .fc-toolbar-title {
@@ -20,4 +37,13 @@ body {
   border-radius: 8px;
   border: none;
   padding: 2px 4px;
+}
+
+.fc .fc-view-harness {
+  min-height: 520px;
+}
+
+.fc .fc-timegrid-slot-label-cushion,
+.fc .fc-timegrid-axis-cushion {
+  font-size: 12px;
 }
