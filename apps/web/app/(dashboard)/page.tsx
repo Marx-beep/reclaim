@@ -119,13 +119,13 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 md:auto-rows-fr">
           {(Object.keys(quadrantMeta) as QuadrantKey[]).map((key) => {
             const section = quadrantMeta[key];
             const items = quadrants[key];
 
             return (
-              <section key={key} className={`rounded-xl border p-4 shadow-sm ${section.tone}`}>
+              <section key={key} className={`flex h-[360px] flex-col rounded-xl border p-4 shadow-sm ${section.tone}`}>
                 <div className="mb-3 flex items-center justify-between">
                   <div>
                     <h2 className="text-base font-semibold text-slate-900">{section.title}</h2>
@@ -134,7 +134,7 @@ export default function DashboardPage() {
                   <span className="rounded-full bg-white/80 px-2 py-1 text-xs font-medium text-slate-700">{items.length}</span>
                 </div>
 
-                <div className="space-y-2">
+                <div className="flex-1 space-y-2 overflow-y-auto pr-1">
                   {items.length === 0 ? <div className="rounded-lg bg-white/80 p-3 text-sm text-slate-500">暂无任务</div> : null}
                   {items.map((task) => (
                     <div key={task.id} className="rounded-lg bg-white p-3">

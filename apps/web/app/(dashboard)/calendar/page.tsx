@@ -70,6 +70,15 @@ export default function CalendarWorkspacePage() {
   );
 
   useEffect(() => {
+    if (!schedulerOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [schedulerOpen]);
+
+  useEffect(() => {
     if (!selectedRange) return;
     setSlotStart(toLocalInputValue(new Date(selectedRange.start)));
     setSlotEnd(toLocalInputValue(new Date(selectedRange.end)));
@@ -83,9 +92,17 @@ export default function CalendarWorkspacePage() {
     setSelectedTaskId(taskIdFromQuery);
   }, []);
 
+  useEffect(() => {
+    if (!schedulerOpen || selectableTasks.length === 0) return;
+    if (!selectedTaskId || !selectableTasks.some((task) => task.id === selectedTaskId)) {
+      setSelectedTaskId(selectableTasks[0].id);
+    }
+  }, [schedulerOpen, selectableTasks, selectedTaskId]);
+
   const scheduleTask = useMutation({
     mutationFn: async () => {
       if (!selectedTaskId) throw new Error("请先选择任务");
+      if (!slotStart || !slotEnd) throw new Error("请选择开始和结束时间");
       const startAtIso = toIso(slotStart);
       const endAtIso = toIso(slotEnd);
       if (new Date(endAtIso) <= new Date(startAtIso)) {
@@ -155,9 +172,10 @@ export default function CalendarWorkspacePage() {
                 <select
                   className="mt-1 h-10 w-full rounded-md border border-slate-300 px-2 text-sm"
                   value={selectedTaskId}
+                  disabled={selectableTasks.length === 0}
                   onChange={(event) => setSelectedTaskId(event.target.value)}
                 >
-                  <option value="">请选择任务</option>
+                  <option value="">{selectableTasks.length === 0 ? "暂无可安排任务" : "请选择任务"}</option>
                   {selectableTasks.map((task) => (
                     <option key={task.id} value={task.id}>
                       {task.smartEvent.title} {task.smartEvent.dueAt ? `(截止 ${new Date(task.smartEvent.dueAt).toLocaleDateString("zh-CN")})` : ""}
@@ -209,7 +227,7 @@ export default function CalendarWorkspacePage() {
                 <button
                   type="submit"
                   className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-white"
-                  disabled={scheduleTask.isPending}
+                  disabled={scheduleTask.isPending || selectableTasks.length === 0}
                 >
                   {scheduleTask.isPending ? "安排中..." : "确认安排"}
                 </button>
