@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import FullCalendar from "@fullcalendar/react";
@@ -33,6 +33,8 @@ export function CalendarBoard({
         locale={zhCnLocale}
         initialView="timeGridWeek"
         nowIndicator
+        slotMinTime="06:00:00"
+        scrollTime="06:00:00"
         height="auto"
         selectable
         selectMirror
