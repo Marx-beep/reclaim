@@ -14,6 +14,7 @@
     "maintenance:start": "cmd /c scripts\\windows\\start-maintenance.cmd",
     "maintenance:stop": "cmd /c scripts\\windows\\stop-maintenance.cmd",
     "maintenance:status": "cmd /c scripts\\windows\\status-maintenance.cmd",
+    "app-use:build": "cmd /c scripts\\windows\\build-app-use.cmd",
     "git:sync": "cmd /c scripts\\windows\\git-sync.cmd"
   },
   "devDependencies": {

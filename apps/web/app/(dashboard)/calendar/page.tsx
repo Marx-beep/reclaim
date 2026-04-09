@@ -8,7 +8,7 @@ import { EventDetailDrawer } from "@/components/dashboard/event-detail-drawer";
 import { QuickCreatePanel } from "@/components/dashboard/quick-create";
 import { ScheduleImportPanel } from "@/components/dashboard/schedule-import-panel";
 import { apiFetch } from "@/lib/api/client";
-import { CATEGORY_TAG_OPTIONS, normalizeCategoryTag, type CategoryTag } from "@/lib/tags/time-categories";
+import { CATEGORY_TAG_OPTIONS, normalizeCategoryTag, normalizeCustomTags, type CategoryTag } from "@/lib/tags/time-categories";
 
 type TaskRecord = {
   id: string;
@@ -30,10 +30,7 @@ function toIso(input: string) {
 }
 
 function parseCustomTags(input: string) {
-  return input
-    .split(/[,，]/)
-    .map((tag) => tag.trim())
-    .filter(Boolean);
+  return normalizeCustomTags(input.split(/[,，]/));
 }
 
 export default function CalendarWorkspacePage() {

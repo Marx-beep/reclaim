@@ -10,7 +10,7 @@
     "build": "node -e \"console.log('Use dist:win to build Windows exe')\"",
     "typecheck": "node -e \"console.log('No static typecheck in desktop shell')\"",
     "test": "node -e \"console.log('No desktop tests yet')\"",
-    "dist:win": "electron-builder --win portable"
+    "dist:win": "electron-builder --win portable --config.directories.output=dist-release"
   },
   "devDependencies": {
     "electron": "^31.7.7",
@@ -18,7 +18,7 @@
   },
   "build": {
     "appId": "com.reclaim.desktop",
-    "productName": "Reclaim 时间管家",
+    "productName": "Reclaim Time Manager",
     "directories": {
       "output": "dist"
     },

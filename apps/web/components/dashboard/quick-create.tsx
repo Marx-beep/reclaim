@@ -7,7 +7,7 @@ import { Button } from "@/components/shared/button";
 import { Input } from "@/components/shared/input";
 import { apiFetch } from "@/lib/api/client";
 import { t } from "@/lib/i18n";
-import { CATEGORY_TAG_OPTIONS, type CategoryTag } from "@/lib/tags/time-categories";
+import { CATEGORY_TAG_OPTIONS, normalizeCustomTags, type CategoryTag } from "@/lib/tags/time-categories";
 
 function toLocalInputValue(date: Date) {
   const timezoneOffsetMs = date.getTimezoneOffset() * 60_000;
@@ -34,14 +34,7 @@ function habitRuleFromPreset(preset: HabitPreset) {
 }
 
 function parseCustomTags(input: string) {
-  return Array.from(
-    new Set(
-      input
-        .split(/[,，]/)
-        .map((item) => item.trim())
-        .filter(Boolean)
-    )
-  ).slice(0, 12);
+  return normalizeCustomTags(input.split(/[,，]/));
 }
 
 export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: string; end: string } | null }) {

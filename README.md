@@ -82,6 +82,20 @@ scripts\\windows\\start-maintenance.cmd
 
 - [app-use/中文软件使用教程.md](./app-use/中文软件使用教程.md)
 
+## EXE 一键更新
+
+```bat
+scripts\windows\build-app-use.cmd
+```
+
+或：
+
+```bash
+npm run app-use:build
+```
+
+执行后会自动重建 web + desktop，并把最新 EXE 和教程同步到 `app-use/`。
+
 ## 推送到 GitHub 常见问题
 
 如果提示未配置 Git 身份：
