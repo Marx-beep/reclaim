@@ -38,42 +38,24 @@ if not defined SCHEDULER_PID (
 )
 
 call :get_pid_on_port 3000 WEB_PID
-if not defined WEB_PID (
-  if not exist "%ROOT%\apps\web\.next\BUILD_ID" (
-    echo [reclaim] Web build not found, building apps/web...
-    pushd "%ROOT%"
-    call pnpm.cmd --filter @reclaim/web build
-    if errorlevel 1 (
-      echo [reclaim] Web build failed.
-      popd
-      exit /b 1
-    )
-    popd
-  )
-  echo [reclaim] Starting web on 3000 - production mode...
-  start "reclaim-web" /D "%ROOT%" pnpm.cmd --filter @reclaim/web start
-) else (
-  call :is_healthy_url http://localhost:3000/
-  if errorlevel 1 (
-    echo [reclaim] Web unhealthy, restarting PID %WEB_PID%...
-    taskkill /PID %WEB_PID% /F >nul 2>nul
-    timeout /t 1 /nobreak >nul
-    if not exist "%ROOT%\apps\web\.next\BUILD_ID" (
-      echo [reclaim] Web build not found, building apps/web...
-      pushd "%ROOT%"
-      call pnpm.cmd --filter @reclaim/web build
-      if errorlevel 1 (
-        echo [reclaim] Web build failed.
-        popd
-        exit /b 1
-      )
-      popd
-    )
-    start "reclaim-web" /D "%ROOT%" pnpm.cmd --filter @reclaim/web start
-  ) else (
-    echo [reclaim] Web already running on 3000.
-  )
+echo [reclaim] Building apps/web (always)...
+pushd "%ROOT%"
+call pnpm.cmd --filter @reclaim/web build
+if errorlevel 1 (
+  echo [reclaim] Web build failed.
+  popd
+  exit /b 1
 )
+popd
+
+if defined WEB_PID (
+  echo [reclaim] Restarting web PID %WEB_PID% to load latest build...
+  taskkill /PID %WEB_PID% /F >nul 2>nul
+  timeout /t 1 /nobreak >nul
+)
+
+echo [reclaim] Starting web on 3000 - production mode...
+start "reclaim-web" /D "%ROOT%" pnpm.cmd --filter @reclaim/web start
 
 timeout /t 5 /nobreak >nul
 

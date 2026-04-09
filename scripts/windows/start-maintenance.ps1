@@ -102,30 +102,24 @@ else {
   Log "Scheduler already running (PID=$schedulerPid)"
 }
 
-if (-not (Test-Path -LiteralPath (Join-Path $workspaceRoot "apps\web\.next\BUILD_ID"))) {
-  Log "Web build not found, building apps/web"
-  & $pnpmCmd --filter @reclaim/web build | Out-Host
-}
+Log "Building apps/web (always)"
+& $pnpmCmd --filter @reclaim/web build | Out-Host
 
 $webPid = Get-PortPid 3000
-if ($webPid -eq 0 -or -not (Test-HttpHealthy "http://localhost:3000/")) {
-  if ($webPid -ne 0) {
-    Log "Restarting unhealthy web process (PID=$webPid)"
-    Stop-Process -Id $webPid -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 1
-  }
-  Log "Starting web on 3000"
-  $web = Start-Process -FilePath $pnpmCmd `
-    -ArgumentList "--filter", "@reclaim/web", "start" `
-    -WorkingDirectory $workspaceRoot `
-    -PassThru `
-    -RedirectStandardOutput (Join-Path $logDir "web.out.log") `
-    -RedirectStandardError (Join-Path $logDir "web.err.log")
-  $webPid = [int]$web.Id
+if ($webPid -ne 0) {
+  Log "Restarting web process to load latest build (PID=$webPid)"
+  Stop-Process -Id $webPid -Force -ErrorAction SilentlyContinue
+  Start-Sleep -Seconds 1
 }
-else {
-  Log "Web already running (PID=$webPid)"
-}
+
+Log "Starting web on 3000"
+$web = Start-Process -FilePath $pnpmCmd `
+  -ArgumentList "--filter", "@reclaim/web", "start" `
+  -WorkingDirectory $workspaceRoot `
+  -PassThru `
+  -RedirectStandardOutput (Join-Path $logDir "web.out.log") `
+  -RedirectStandardError (Join-Path $logDir "web.err.log")
+$webPid = [int]$web.Id
 
 Start-Sleep -Seconds 5
 
