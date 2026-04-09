@@ -39,15 +39,37 @@ if not defined SCHEDULER_PID (
 
 call :get_pid_on_port 3000 WEB_PID
 if not defined WEB_PID (
-  echo [reclaim] Starting web on 3000 - dev mode...
-  start "reclaim-web" /D "%ROOT%" pnpm.cmd --filter @reclaim/web dev
+  if not exist "%ROOT%\apps\web\.next\BUILD_ID" (
+    echo [reclaim] Web build not found, building apps/web...
+    pushd "%ROOT%"
+    call pnpm.cmd --filter @reclaim/web build
+    if errorlevel 1 (
+      echo [reclaim] Web build failed.
+      popd
+      exit /b 1
+    )
+    popd
+  )
+  echo [reclaim] Starting web on 3000 - production mode...
+  start "reclaim-web" /D "%ROOT%" pnpm.cmd --filter @reclaim/web start
 ) else (
   call :is_healthy_url http://localhost:3000/
   if errorlevel 1 (
     echo [reclaim] Web unhealthy, restarting PID %WEB_PID%...
     taskkill /PID %WEB_PID% /F >nul 2>nul
     timeout /t 1 /nobreak >nul
-    start "reclaim-web" /D "%ROOT%" pnpm.cmd --filter @reclaim/web dev
+    if not exist "%ROOT%\apps\web\.next\BUILD_ID" (
+      echo [reclaim] Web build not found, building apps/web...
+      pushd "%ROOT%"
+      call pnpm.cmd --filter @reclaim/web build
+      if errorlevel 1 (
+        echo [reclaim] Web build failed.
+        popd
+        exit /b 1
+      )
+      popd
+    )
+    start "reclaim-web" /D "%ROOT%" pnpm.cmd --filter @reclaim/web start
   ) else (
     echo [reclaim] Web already running on 3000.
   )

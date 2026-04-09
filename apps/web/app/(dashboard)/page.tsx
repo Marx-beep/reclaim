@@ -54,17 +54,17 @@ export default function DashboardPage() {
   const urgentCount = quadrants.importantUrgent.length + quadrants.urgentNotImportant.length;
 
   return (
-    <div className="mx-auto w-full max-w-[1680px] space-y-4">
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="mx-auto w-full max-w-[1600px] space-y-3">
+      <div className="grid gap-2 md:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="text-xs text-slate-500">进行中任务</div>
-          <div className="mt-1 text-2xl font-semibold text-slate-900">{activeTasks.length}</div>
+          <div className="mt-1 text-xl font-semibold text-slate-900">{activeTasks.length}</div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="text-xs text-slate-500">紧急任务</div>
-          <div className="mt-1 text-2xl font-semibold text-slate-900">{urgentCount}</div>
+          <div className="mt-1 text-xl font-semibold text-slate-900">{urgentCount}</div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="text-xs text-slate-500">日历排程</div>
           <Link href="/calendar" className="mt-1 inline-flex text-sm font-medium text-primary hover:underline">
             打开日历工作台
@@ -72,29 +72,29 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="grid gap-4 md:grid-cols-2 md:auto-rows-fr">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid gap-3 md:grid-cols-2 md:auto-rows-fr">
           {(Object.keys(quadrantMeta) as QuadrantKey[]).map((key) => {
             const section = quadrantMeta[key];
             const items = quadrants[key];
 
             return (
-              <section key={key} className={`flex h-[360px] flex-col rounded-xl border p-4 shadow-sm ${section.tone}`}>
-                <div className="mb-3 flex items-center justify-between">
+              <section key={key} className={`flex h-[280px] flex-col rounded-xl border p-3 shadow-sm ${section.tone}`}>
+                <div className="mb-2 flex items-center justify-between">
                   <div>
-                    <h2 className="text-base font-semibold text-slate-900">{section.title}</h2>
+                    <h2 className="text-[22px] font-semibold leading-6 text-slate-900">{section.title}</h2>
                     <p className="text-xs text-slate-600">{section.subtitle}</p>
                   </div>
                   <span className="rounded-full bg-white/80 px-2 py-1 text-xs font-medium text-slate-700">{items.length}</span>
                 </div>
 
-                <div className="flex-1 space-y-2 overflow-y-auto pr-1">
-                  {items.length === 0 ? <div className="rounded-lg bg-white/80 p-3 text-sm text-slate-500">暂无任务</div> : null}
+                <div className="flex-1 space-y-1.5 overflow-y-auto pr-1">
+                  {items.length === 0 ? <div className="rounded-lg bg-white/80 p-2 text-sm text-slate-500">暂无任务</div> : null}
                   {items.map((task) => (
-                    <div key={task.id} className="rounded-lg bg-white p-3">
-                      <div className="text-sm font-medium text-slate-900">{task.smartEvent.title}</div>
+                    <div key={task.id} className="rounded-lg bg-white p-2">
+                      <div className="truncate text-sm font-medium text-slate-900">{task.smartEvent.title}</div>
                       <div className="mt-1 text-xs text-slate-600">{formatDueAtZh(task.smartEvent.dueAt)}</div>
-                      <div className="mt-2 flex items-center justify-between">
+                      <div className="mt-1.5 flex items-center justify-between">
                         <span className="rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{task.smartEvent.priority}</span>
                         <Link href={`/calendar?taskId=${task.id}`} className="text-xs font-medium text-primary hover:underline">
                           选时间安排
