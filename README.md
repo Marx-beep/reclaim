@@ -36,6 +36,23 @@ pnpm db:seed
 scripts\\windows\\start-maintenance.cmd
 ```
 
+建议先执行环境自检（新电脑尤其建议）：
+
+```bat
+scripts\\windows\\check-env.cmd
+```
+
+或：
+
+```bash
+npm run maintenance:check
+```
+
+说明：
+- 调度服务会自动在 `services/scheduler/.venv` 中运行（首次启动自动创建并安装依赖）。
+- 启动脚本会自动探测 `pnpm`；若未安装会尝试通过 `corepack` 自动激活。
+- 因此换一台电脑时，只要安装 Node.js 18+ 与 Python 3.11+，同样可一键启动。
+
 启动后：
 - 前端：`http://localhost:3000/`
 - 运维后台（独立页面）：`http://localhost:3000/ops`
@@ -72,6 +89,7 @@ scripts\\windows\\start-maintenance.cmd
 - `/api/habits`
 - `/api/focus`
 - `/api/scheduling/recompute`
+- `/api/scheduling/dynamic-replan`
 - `/api/scheduling/preview`
 - `/api/links`
 - `/api/analytics/weekly`

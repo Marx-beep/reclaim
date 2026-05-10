@@ -24,7 +24,6 @@ export async function POST(request: Request) {
     });
 
     const queueWarning = "当前为本地直连执行，已跳过队列分发。";
-
     return ok({ jobId: recomputed.jobId, result: recomputed.result, queueWarning });
   } catch (error) {
     return fail(error instanceof Error ? error.message : "Recompute failed", 500);

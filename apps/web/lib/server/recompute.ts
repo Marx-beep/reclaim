@@ -9,27 +9,25 @@ type RecomputeInput = {
   trigger: RecomputeTrigger;
   windowStart?: Date;
   windowEnd?: Date;
+  triggerRef?: string | null;
 };
 
-export async function recomputeWindowForUser(input: RecomputeInput) {
-  const windowStart = input.windowStart ?? new Date();
-  const windowEnd = input.windowEnd ?? new Date(windowStart.getTime() + 7 * 24 * 60 * 60_000);
-
+async function loadSchedulingContext(userId: string, windowStart: Date, windowEnd: Date) {
   const [events, policy, workHours] = await Promise.all([
     prisma.smartEvent.findMany({
       where: {
-        userId: input.userId,
+        userId,
         deletedAt: null,
         startAt: { lt: windowEnd },
         endAt: { gt: windowStart }
       }
     }),
-    prisma.timePolicy.findUnique({ where: { userId: input.userId } }),
-    prisma.workHourRule.findMany({ where: { userId: input.userId, enabled: true, deletedAt: null } })
+    prisma.timePolicy.findUnique({ where: { userId } }),
+    prisma.workHourRule.findMany({ where: { userId, enabled: true, deletedAt: null } })
   ]);
 
-  const payload = buildSchedulerPayload({
-    userId: input.userId,
+  return buildSchedulerPayload({
+    userId,
     windowStart,
     windowEnd,
     events,
@@ -39,11 +37,28 @@ export async function recomputeWindowForUser(input: RecomputeInput) {
       hardLockLeadHours: policy?.hardLockLeadHours ?? 4
     }
   });
+}
+
+export async function previewWindowForUser(input: RecomputeInput) {
+  const windowStart = input.windowStart ?? new Date();
+  const windowEnd = input.windowEnd ?? new Date(windowStart.getTime() + 7 * 24 * 60 * 60_000);
+
+  const payload = await loadSchedulingContext(input.userId, windowStart, windowEnd);
+  const result = await callScheduler("/schedule/preview", payload);
+  return { windowStart, windowEnd, result };
+}
+
+export async function recomputeWindowForUser(input: RecomputeInput) {
+  const windowStart = input.windowStart ?? new Date();
+  const windowEnd = input.windowEnd ?? new Date(windowStart.getTime() + 7 * 24 * 60 * 60_000);
+
+  const payload = await loadSchedulingContext(input.userId, windowStart, windowEnd);
 
   const job = await prisma.rescheduleJob.create({
     data: {
       userId: input.userId,
       triggerType: input.trigger,
+      triggerRef: input.triggerRef ?? null,
       windowStart,
       windowEnd,
       status: "RUNNING",
@@ -51,7 +66,7 @@ export async function recomputeWindowForUser(input: RecomputeInput) {
     }
   });
 
-  const result = await callScheduler("/schedule/commit", payload);
+  const result = await callScheduler("/schedule/recompute-window", payload);
 
   await prisma.$transaction(async (tx) => {
     for (const move of result.moves) {
@@ -108,4 +123,3 @@ export async function recomputeWindowSafely(input: RecomputeInput) {
     };
   }
 }
-

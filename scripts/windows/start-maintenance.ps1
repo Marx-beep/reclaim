@@ -8,6 +8,36 @@ function Log([string]$message) {
   Write-Host "[reclaim] $message"
 }
 
+function Resolve-CommandPath([string[]]$names) {
+  foreach ($name in $names) {
+    $cmd = Get-Command $name -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($cmd) {
+      return $cmd.Source
+    }
+  }
+  return $null
+}
+
+function Resolve-Pnpm() {
+  $pnpm = Resolve-CommandPath @("pnpm.cmd", "pnpm")
+  if ($pnpm) {
+    return $pnpm
+  }
+
+  $corepack = Resolve-CommandPath @("corepack.cmd", "corepack")
+  if ($corepack) {
+    Log "pnpm not found, enabling pnpm via corepack"
+    & $corepack enable | Out-Host
+    & $corepack prepare "pnpm@9.12.2" --activate | Out-Host
+    $pnpm = Resolve-CommandPath @("pnpm.cmd", "pnpm")
+    if ($pnpm) {
+      return $pnpm
+    }
+  }
+
+  throw "pnpm not found. Install Node.js 18+ (with corepack) or install pnpm globally."
+}
+
 function Get-PortPid([int]$port) {
   $listener = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($listener) {
@@ -49,16 +79,14 @@ $workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $runtimeDir = Join-Path $workspaceRoot ".runtime"
 $logDir = Join-Path $runtimeDir "logs"
 $pidFile = Join-Path $runtimeDir "maintenance-pids.json"
+$schedulerRoot = Join-Path $workspaceRoot "services\scheduler"
+$schedulerRunner = Join-Path $schedulerRoot "scripts\run-python.ps1"
 
 New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 
-$nodePath = "C:\Program Files\nodejs"
-$pnpmPath = Join-Path $env:USERPROFILE "AppData\Roaming\npm"
-$pnpmCmd = Join-Path $pnpmPath "pnpm.cmd"
-$pythonExe = Join-Path $env:USERPROFILE "AppData\Local\Python\pythoncore-3.14-64\python.exe"
-
-$env:Path = "$nodePath;$pnpmPath;" + $env:Path
+$pnpmCmd = Resolve-Pnpm
+$powershellExe = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"
 Load-DotEnv (Join-Path $workspaceRoot ".env")
 
 if (-not $env:DATABASE_URL) { $env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/reclaim" }
@@ -67,12 +95,12 @@ if (-not $env:NEXTAUTH_SECRET) { $env:NEXTAUTH_SECRET = "replace-me" }
 if (-not $env:NEXTAUTH_URL) { $env:NEXTAUTH_URL = "http://localhost:3000" }
 if (-not $env:SCHEDULER_BASE_URL) { $env:SCHEDULER_BASE_URL = "http://localhost:8000" }
 
-if (-not (Test-Path -LiteralPath $pnpmCmd)) {
-  throw "pnpm.cmd not found at $pnpmCmd"
+if (-not (Test-Path -LiteralPath $schedulerRunner)) {
+  throw "Scheduler runner script not found: $schedulerRunner"
 }
 
-if (-not (Test-Path -LiteralPath $pythonExe)) {
-  throw "Python not found at $pythonExe"
+if (-not (Test-Path -LiteralPath $powershellExe)) {
+  throw "PowerShell executable not found: $powershellExe"
 }
 
 try {
@@ -90,9 +118,9 @@ if ($schedulerPid -eq 0 -or -not (Test-HttpHealthy "http://localhost:8000/health
     Start-Sleep -Seconds 1
   }
   Log "Starting scheduler on 8000"
-  $scheduler = Start-Process -FilePath $pythonExe `
-    -ArgumentList "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000" `
-    -WorkingDirectory (Join-Path $workspaceRoot "services\scheduler") `
+  $scheduler = Start-Process -FilePath $powershellExe `
+    -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $schedulerRunner, "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000" `
+    -WorkingDirectory $schedulerRoot `
     -PassThru `
     -RedirectStandardOutput (Join-Path $logDir "scheduler.out.log") `
     -RedirectStandardError (Join-Path $logDir "scheduler.err.log")

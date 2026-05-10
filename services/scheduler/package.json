@@ -2,10 +2,10 @@
   "name": "@reclaim/scheduler-service",
   "private": true,
   "scripts": {
-    "dev": "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
-    "build": "C:/Users/cwh18/AppData/Local/Python/pythoncore-3.14-64/python.exe -m compileall app",
-    "test": "C:/Users/cwh18/AppData/Local/Python/pythoncore-3.14-64/python.exe -m pytest tests",
-    "lint": "C:/Users/cwh18/AppData/Local/Python/pythoncore-3.14-64/python.exe -m py_compile app/main.py",
-    "typecheck": "C:/Users/cwh18/AppData/Local/Python/pythoncore-3.14-64/python.exe -m py_compile app/main.py"
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-python.ps1 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "build": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-python.ps1 -m compileall app",
+    "test": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-python.ps1 -m pytest tests",
+    "lint": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-python.ps1 -m py_compile app/main.py",
+    "typecheck": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-python.ps1 -m py_compile app/main.py"
   }
 }

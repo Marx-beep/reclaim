@@ -1,15 +1,41 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
+
+function Resolve-CommandPath([string[]]$names) {
+  foreach ($name in $names) {
+    $cmd = Get-Command $name -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($cmd) {
+      return $cmd.Source
+    }
+  }
+  return $null
+}
+
+function Resolve-Pnpm() {
+  $pnpm = Resolve-CommandPath @("pnpm.cmd", "pnpm")
+  if ($pnpm) {
+    return $pnpm
+  }
+
+  $corepack = Resolve-CommandPath @("corepack.cmd", "corepack")
+  if ($corepack) {
+    Write-Host "[reclaim] pnpm not found, enabling pnpm via corepack..."
+    & $corepack enable | Out-Host
+    & $corepack prepare "pnpm@9.12.2" --activate | Out-Host
+    $pnpm = Resolve-CommandPath @("pnpm.cmd", "pnpm")
+    if ($pnpm) {
+      return $pnpm
+    }
+  }
+
+  throw "pnpm not found. Install Node.js 18+ (with corepack) or install pnpm globally."
+}
 
 $workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $appUseDir = Join-Path $workspaceRoot "app-use"
 $desktopDist = Join-Path $workspaceRoot "apps\desktop\dist-release"
 $docSource = Join-Path $workspaceRoot "docs\中文软件使用教程.md"
 $docFallback = Join-Path $workspaceRoot "app-use\中文软件使用教程.md"
-$pnpmCmd = Join-Path $env:USERPROFILE "AppData\Roaming\npm\pnpm.cmd"
-
-if (-not (Test-Path -LiteralPath $pnpmCmd)) {
-  throw "pnpm.cmd not found: $pnpmCmd"
-}
+$pnpmCmd = Resolve-Pnpm
 
 Write-Host "[reclaim] Building web production bundle..."
 Push-Location $workspaceRoot

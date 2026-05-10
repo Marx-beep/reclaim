@@ -20,6 +20,7 @@ apps/desktop/dist-release
 
 # Embedded/runtime artifacts
 services/scheduler/Python/
+services/scheduler/.venv/
 
 # Optional generated delivery folder
 # app-use/
