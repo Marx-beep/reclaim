@@ -18,13 +18,6 @@ function toIso(input: string) {
   return new Date(input).toISOString();
 }
 
-function defaultTimeWindow(minutesFromNowStart: number, minutesFromNowEnd: number) {
-  return {
-    startAt: toLocalInputValue(new Date(Date.now() + minutesFromNowStart * 60_000)),
-    endAt: toLocalInputValue(new Date(Date.now() + minutesFromNowEnd * 60_000))
-  };
-}
-
 type HabitPreset = "DAILY" | "WEEKDAY" | "WEEKLY";
 
 function habitRuleFromPreset(preset: HabitPreset) {
@@ -41,20 +34,17 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
   const queryClient = useQueryClient();
   const copy = t("dashboard");
 
-  const initialTaskWindow = defaultTimeWindow(60, 120);
-  const initialHabitWindow = defaultTimeWindow(120, 150);
-
   const [taskTitle, setTaskTitle] = useState("");
-  const [taskStartAt, setTaskStartAt] = useState(initialTaskWindow.startAt);
-  const [taskEndAt, setTaskEndAt] = useState(initialTaskWindow.endAt);
-  const [taskDueAt, setTaskDueAt] = useState(toLocalInputValue(new Date(Date.now() + 24 * 60 * 60_000)));
+  const [taskStartAt, setTaskStartAt] = useState("");
+  const [taskEndAt, setTaskEndAt] = useState("");
+  const [taskDueAt, setTaskDueAt] = useState("");
   const [taskPriority, setTaskPriority] = useState<"P1" | "P2" | "P3" | "P4">("P2");
   const [taskCategoryTag, setTaskCategoryTag] = useState<CategoryTag>("WORK");
   const [taskCustomTagsInput, setTaskCustomTagsInput] = useState("");
 
   const [habitTitle, setHabitTitle] = useState("");
-  const [habitStartAt, setHabitStartAt] = useState(initialHabitWindow.startAt);
-  const [habitEndAt, setHabitEndAt] = useState(initialHabitWindow.endAt);
+  const [habitStartAt, setHabitStartAt] = useState("");
+  const [habitEndAt, setHabitEndAt] = useState("");
   const [habitPreset, setHabitPreset] = useState<HabitPreset>("DAILY");
   const [habitCategoryTag, setHabitCategoryTag] = useState<CategoryTag>("WORK");
   const [habitCustomTagsInput, setHabitCustomTagsInput] = useState("");
@@ -75,6 +65,9 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
     mutationFn: async () => {
       if (!taskTitle.trim()) {
         throw new Error("请先输入任务名称");
+      }
+      if (!taskStartAt || !taskEndAt || !taskDueAt) {
+        throw new Error("请先填写任务开始、结束和截止时间");
       }
       const startAtIso = toIso(taskStartAt);
       const endAtIso = toIso(taskEndAt);
@@ -111,6 +104,9 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
     mutationFn: async () => {
       if (!habitTitle.trim()) {
         throw new Error("请先输入习惯名称");
+      }
+      if (!habitStartAt || !habitEndAt) {
+        throw new Error("请先填写习惯开始和结束时间");
       }
       const startAtIso = toIso(habitStartAt);
       const endAtIso = toIso(habitEndAt);
@@ -188,17 +184,17 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="text-xs text-slate-600">
               {copy.manualStart}
-              <Input type="datetime-local" value={taskStartAt} onChange={(event) => setTaskStartAt(event.target.value)} />
+              <Input type="datetime-local" value={taskStartAt} onChange={(event) => setTaskStartAt(event.target.value)} placeholder="请选择开始时间" />
             </label>
             <label className="text-xs text-slate-600">
               {copy.manualEnd}
-              <Input type="datetime-local" value={taskEndAt} onChange={(event) => setTaskEndAt(event.target.value)} />
+              <Input type="datetime-local" value={taskEndAt} onChange={(event) => setTaskEndAt(event.target.value)} placeholder="请选择结束时间" />
             </label>
           </div>
 
           <label className="block text-xs text-slate-600">
             {copy.manualDue}
-            <Input type="datetime-local" value={taskDueAt} onChange={(event) => setTaskDueAt(event.target.value)} />
+            <Input type="datetime-local" value={taskDueAt} onChange={(event) => setTaskDueAt(event.target.value)} placeholder="请选择截止时间" />
           </label>
 
           <label className="block text-xs text-slate-600">
@@ -255,11 +251,11 @@ export function QuickCreatePanel({ selectedRange }: { selectedRange?: { start: s
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="text-xs text-slate-600">
               {copy.manualStart}
-              <Input type="datetime-local" value={habitStartAt} onChange={(event) => setHabitStartAt(event.target.value)} />
+              <Input type="datetime-local" value={habitStartAt} onChange={(event) => setHabitStartAt(event.target.value)} placeholder="请选择开始时间" />
             </label>
             <label className="text-xs text-slate-600">
               {copy.manualEnd}
-              <Input type="datetime-local" value={habitEndAt} onChange={(event) => setHabitEndAt(event.target.value)} />
+              <Input type="datetime-local" value={habitEndAt} onChange={(event) => setHabitEndAt(event.target.value)} placeholder="请选择结束时间" />
             </label>
           </div>
 

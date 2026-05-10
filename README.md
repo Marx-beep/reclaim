@@ -58,6 +58,49 @@ npm run maintenance:check
 - 运维后台（独立页面）：`http://localhost:3000/ops`
 - 调度服务文档：`http://localhost:8000/docs`
 
+## LLM 策略建议重排（可选）
+
+如需让大模型先给“重排策略建议”，再由本地调度器执行，请配置：
+
+```bash
+OPENAI_API_KEY=你的密钥
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_BASE_URL=https://api.openai.com/v1/chat/completions
+```
+
+调用接口：
+
+```bash
+POST /api/scheduling/llm-replan
+{
+  "instruction": "请优先保障48小时内截止任务，尽量减少会议打断",
+  "fallbackOnError": true
+}
+```
+
+先维护你的调度规则（LLM 会学习这些规则）：
+
+```bash
+PUT /api/scheduling/llm-rules
+{
+  "rules": [
+    { "content": "硬锁定事件不可移动", "enabled": true, "weight": 3 },
+    { "content": "48小时内截止任务优先级提升", "enabled": true, "weight": 2 },
+    { "content": "尽量减少同一天上下文切换", "enabled": true, "weight": 1.5 }
+  ]
+}
+```
+
+如果你想在通用重排接口直接启用 LLM 参与：
+
+```bash
+POST /api/scheduling/recompute
+{
+  "useLlmAdvisor": true,
+  "instruction": "按规则稳定计划，再推进高优任务"
+}
+```
+
 ## 目录结构（Monorepo）
 
 - `apps/web`：前端 + BFF API
@@ -90,6 +133,8 @@ npm run maintenance:check
 - `/api/focus`
 - `/api/scheduling/recompute`
 - `/api/scheduling/dynamic-replan`
+- `/api/scheduling/llm-replan`
+- `/api/scheduling/llm-rules`
 - `/api/scheduling/preview`
 - `/api/links`
 - `/api/analytics/weekly`
