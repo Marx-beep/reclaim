@@ -4,17 +4,42 @@
 
 :root {
   color-scheme: light;
+  --page-bg: #f5efe5;
+  --panel: rgba(255, 250, 243, 0.88);
+  --panel-strong: rgba(255, 255, 255, 0.92);
+  --outline: rgba(96, 74, 35, 0.14);
+  --shadow-soft: 0 24px 60px rgba(98, 72, 31, 0.12);
+  --shadow-card: 0 14px 36px rgba(86, 66, 36, 0.08);
+  --brand-ink: #173145;
+  --brand-gold: #c8892f;
+  --brand-cream: #fff7eb;
+}
+
+html {
+  background:
+    radial-gradient(circle at top left, rgba(248, 211, 148, 0.36), transparent 28%),
+    radial-gradient(circle at top right, rgba(115, 165, 185, 0.18), transparent 26%),
+    linear-gradient(180deg, #f8f1e7 0%, #f5efe5 52%, #f2eadf 100%);
 }
 
 body {
   @apply bg-background text-foreground antialiased;
-  font-family: "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: "Segoe UI Variable Text", "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  background:
+    radial-gradient(circle at top left, rgba(248, 211, 148, 0.34), transparent 30%),
+    radial-gradient(circle at top right, rgba(98, 160, 194, 0.18), transparent 28%),
+    linear-gradient(180deg, #fbf4ea 0%, #f7f0e6 46%, #f2eadf 100%);
+  min-height: 100vh;
 }
 
 * {
   box-sizing: border-box;
+}
+
+*::selection {
+  background: rgba(23, 49, 69, 0.16);
 }
 
 h1,
@@ -26,6 +51,81 @@ label,
 button,
 a {
   word-break: break-word;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input[type="range"] {
+  appearance: none;
+  background: transparent;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  margin-top: -4px;
+  height: 16px;
+  width: 16px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #4f46e5;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+input[type="range"]::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #4f46e5;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+}
+
+h1,
+h2,
+h3 {
+  font-family: "Segoe UI Variable Display", "Trebuchet MS", "PingFang SC", sans-serif;
+  letter-spacing: -0.02em;
+}
+
+a {
+  transition: color 160ms ease, opacity 160ms ease;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.5);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .fc .fc-toolbar-title {
