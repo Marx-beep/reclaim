@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 import { ok, fail } from "@/lib/api/response";
 import { getOrCreateCurrentUserId } from "@/lib/auth/session";
 import { runCalendarSync } from "@/lib/server/calendar-sync";
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       return ok({
         action: parsed.action,
         queued: false,
-        warning: queueHealth.reason ?? "当前环境不可用队列分发。",
+        warning: queueHealth.reason ?? "当前环境不可用队列分发，已降级为直接执行或仅返回提示。",
         queueDetails: queueHealth
       });
     }
