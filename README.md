@@ -171,6 +171,15 @@ DEEPSEEK_MODEL=deepseek-v4-flash
 DEEPSEEK_API_URL=https://api.deepseek.com/chat/completions
 ```
 
+也可以在运维后台配置，不需要手动改 `.env`：
+
+- 打开 `http://localhost:3000/ops`
+- 进入 `DeepSeek API 配置与用量`
+- 输入 API Key、模型名、接口地址与 token 单价
+- 保存后，`/api/scheduling/replan` 会自动读取后台配置并记录调用次数、token 用量和预估费用
+
+注意：后台页面只显示脱敏后的 Key，真实 Key 保存在本地 `.runtime/llm-settings.json`，不会提交到 GitHub。
+
 ## 中文使用教程
 
 - [app-use/中文软件使用教程.md](./app-use/中文软件使用教程.md)

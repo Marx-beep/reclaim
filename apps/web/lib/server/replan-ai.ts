@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getEffectiveLlmConfig } from "@/lib/server/llm-admin";
 
 const timeBlockSchema = z.object({
   start: z.string().min(1).max(40),
@@ -12,6 +13,12 @@ export const aiReplanResultSchema = z.object({
 });
 
 export type AiReplanResult = z.infer<typeof aiReplanResultSchema>;
+
+type ChatCompletionUsage = {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+};
 
 function extractJsonObject(content: string) {
   const cleaned = content.trim().replace(/^```json/i, "").replace(/^```/, "").replace(/```$/, "").trim();
@@ -34,25 +41,19 @@ export async function requestAiReplan(input: {
   currentSchedule: unknown[];
   userInstruction?: string;
 }) {
-  const apiKey = process.env.DEEPSEEK_API_KEY ?? process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  const config = await getEffectiveLlmConfig();
+  if (!config.apiKey) {
     throw new Error("DEEPSEEK_API_KEY is not configured");
   }
 
-  const endpoint =
-    process.env.DEEPSEEK_API_URL ??
-    process.env.OPENAI_BASE_URL ??
-    "https://api.deepseek.com/chat/completions";
-  const model = process.env.DEEPSEEK_MODEL ?? process.env.OPENAI_MODEL ?? "deepseek-v4-flash";
-
-  const response = await fetch(endpoint, {
+  const response = await fetch(config.apiUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      Authorization: `Bearer ${apiKey}`
+      Authorization: `Bearer ${config.apiKey}`
     },
     body: JSON.stringify({
-      model,
+      model: config.model,
       temperature: 0.1,
       response_format: { type: "json_object" },
       messages: [
@@ -90,7 +91,10 @@ export async function requestAiReplan(input: {
     throw new Error(`AI replan request failed: ${response.status} ${message}`);
   }
 
-  const json = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const json = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+    usage?: ChatCompletionUsage;
+  };
   const content = json.choices?.[0]?.message?.content;
   if (!content) {
     throw new Error("AI returned empty content");
@@ -103,6 +107,13 @@ export async function requestAiReplan(input: {
 
   return {
     ...parsed.data,
-    model
+    model: config.model,
+    usage: {
+      promptTokens: json.usage?.prompt_tokens ?? 0,
+      completionTokens: json.usage?.completion_tokens ?? 0,
+      totalTokens:
+        json.usage?.total_tokens ??
+        (json.usage?.prompt_tokens ?? 0) + (json.usage?.completion_tokens ?? 0)
+    }
   };
 }

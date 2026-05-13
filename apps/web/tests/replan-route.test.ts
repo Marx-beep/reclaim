@@ -1,9 +1,26 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const recordLlmUsage = vi.fn();
+
+vi.mock("@/lib/server/llm-admin", () => ({
+  recordLlmUsage,
+  getEffectiveLlmConfig: vi.fn(async () => ({
+    apiKey: process.env.DEEPSEEK_API_KEY ?? process.env.OPENAI_API_KEY ?? "",
+    model: process.env.DEEPSEEK_MODEL ?? process.env.OPENAI_MODEL ?? "deepseek-v4-flash",
+    apiUrl: process.env.DEEPSEEK_API_URL ?? process.env.OPENAI_BASE_URL ?? "https://api.deepseek.com/chat/completions",
+    configured: Boolean(process.env.DEEPSEEK_API_KEY ?? process.env.OPENAI_API_KEY),
+    maskedKey: "te...key",
+    source: process.env.DEEPSEEK_API_KEY ? "env" : "none",
+    inputTokenUsdPerMillion: 0,
+    outputTokenUsdPerMillion: 0
+  }))
+}));
+
 describe("POST /api/scheduling/replan", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.clearAllMocks();
     delete process.env.DEEPSEEK_API_KEY;
     delete process.env.OPENAI_API_KEY;
   });
@@ -44,7 +61,7 @@ describe("POST /api/scheduling/replan", () => {
     expect(body.explanation).toContain("写论文");
   });
 
-  it("uses DeepSeek-compatible API when configured", async () => {
+  it("uses DeepSeek-compatible API when configured and records usage", async () => {
     process.env.DEEPSEEK_API_KEY = "test-key";
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(
@@ -58,7 +75,12 @@ describe("POST /api/scheduling/replan", () => {
                 })
               }
             }
-          ]
+          ],
+          usage: {
+            prompt_tokens: 120,
+            completion_tokens: 40,
+            total_tokens: 160
+          }
         }),
         { status: 200, headers: { "content-type": "application/json" } }
       )
@@ -81,6 +103,13 @@ describe("POST /api/scheduling/replan", () => {
     expect(response.status).toBe(200);
     expect(body.source).toBe("ai");
     expect(body.model).toBe("deepseek-v4-flash");
-    expect(body.newSchedule).toHaveLength(1);
+    expect(body.usage.totalTokens).toBe(160);
+    expect(recordLlmUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "deepseek-v4-flash",
+        status: "success",
+        totalTokens: 160
+      })
+    );
   });
 });

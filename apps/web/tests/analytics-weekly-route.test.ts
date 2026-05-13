@@ -24,6 +24,7 @@ beforeEach(() => {
 
 describe("GET /api/analytics/weekly", () => {
   it("returns enriched analytics payload", async () => {
+    const now = Date.now();
     getOrCreateCurrentUserId.mockResolvedValueOnce("u1");
     prisma.user.findUnique.mockResolvedValueOnce({ timezone: "Asia/Shanghai" });
     prisma.timePolicy.findUnique.mockResolvedValueOnce({
@@ -37,8 +38,8 @@ describe("GET /api/analytics/weekly", () => {
         id: "e1",
         type: "FOCUS",
         title: "Focus",
-        startAt: new Date("2026-04-08T01:00:00.000Z"),
-        endAt: new Date("2026-04-08T02:00:00.000Z"),
+        startAt: new Date(now - 24 * 60 * 60_000),
+        endAt: new Date(now - 23 * 60 * 60_000),
         metadata: null,
         recurrenceRule: null,
         status: "SCHEDULED"
@@ -47,8 +48,8 @@ describe("GET /api/analytics/weekly", () => {
         id: "e2",
         type: "MEETING",
         title: "Meeting",
-        startAt: new Date("2026-04-08T03:00:00.000Z"),
-        endAt: new Date("2026-04-08T04:00:00.000Z"),
+        startAt: new Date(now - 22 * 60 * 60_000),
+        endAt: new Date(now - 21 * 60 * 60_000),
         metadata: null,
         recurrenceRule: null,
         status: "SCHEDULED"
@@ -67,4 +68,3 @@ describe("GET /api/analytics/weekly", () => {
     expect(payload.focusMinutes).toBeGreaterThan(0);
   });
 });
-
