@@ -132,6 +132,7 @@ POST /api/scheduling/recompute
 - `/api/habits`
 - `/api/focus`
 - `/api/scheduling/recompute`
+- `/api/scheduling/replan`
 - `/api/scheduling/dynamic-replan`
 - `/api/scheduling/llm-replan`
 - `/api/scheduling/llm-rules`
@@ -142,6 +143,33 @@ POST /api/scheduling/recompute
 - `/api/analytics/weekly`
 - `/api/settings/time-policy`
 - 时间安排导入：`/api/import/time-arrangement`
+
+## 前端任务变化重排接口
+
+前端可以调用统一入口：
+
+```http
+POST /api/scheduling/replan
+```
+
+示例请求：
+
+```json
+{
+  "type": "task_delayed",
+  "taskId": "task_001",
+  "delayMinutes": 40,
+  "currentSchedule": []
+}
+```
+
+默认会优先调用 DeepSeek/OpenAI 兼容接口；未配置密钥或调用失败时，会自动回退到本地规则重排。DeepSeek 配置：
+
+```bash
+DEEPSEEK_API_KEY=你的DeepSeek密钥
+DEEPSEEK_MODEL=deepseek-v4-flash
+DEEPSEEK_API_URL=https://api.deepseek.com/chat/completions
+```
 
 ## 中文使用教程
 
