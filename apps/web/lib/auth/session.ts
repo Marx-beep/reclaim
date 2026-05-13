@@ -8,8 +8,9 @@ export async function getOrCreateCurrentUserId(): Promise<string> {
     update: {},
     create: {
       email,
-      name: "Demo User",
-      timezone: "America/Los_Angeles"
+      name: "本地用户",
+      timezone: "Asia/Shanghai",
+      locale: "zh-CN"
     }
   });
 
