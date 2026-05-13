@@ -1,0 +1,45 @@
+{
+  "schedule": [
+    {
+      "id": "paper",
+      "title": "写论文",
+      "start": "2026-05-11T09:00:00",
+      "end": "2026-05-11T11:00:00",
+      "priority": "A",
+      "status": "in_progress",
+      "deadline": "2026-05-11T18:00:00",
+      "project": "毕业论文"
+    },
+    {
+      "id": "slides",
+      "title": "做PPT",
+      "start": "2026-05-11T11:00:00",
+      "end": "2026-05-11T12:00:00",
+      "priority": "B",
+      "status": "not_started"
+    },
+    {
+      "id": "meeting",
+      "title": "组会",
+      "start": "2026-05-11T14:00:00",
+      "end": "2026-05-11T15:00:00",
+      "priority": "S",
+      "status": "not_started"
+    },
+    {
+      "id": "refs",
+      "title": "整理参考文献",
+      "start": "2026-05-11T15:00:00",
+      "end": "2026-05-11T15:40:00",
+      "priority": "C",
+      "status": "not_started",
+      "is_low_load": true,
+      "project": "毕业论文"
+    }
+  ],
+  "event": {
+    "type": "task_delayed",
+    "taskId": "paper",
+    "delayMinutes": 40
+  }
+}

@@ -135,6 +135,8 @@ POST /api/scheduling/recompute
 - `/api/scheduling/dynamic-replan`
 - `/api/scheduling/llm-replan`
 - `/api/scheduling/llm-rules`
+- `/api/scheduling/event-replan`
+- `/api/scheduling/event-replan/undo`
 - `/api/scheduling/preview`
 - `/api/links`
 - `/api/analytics/weekly`

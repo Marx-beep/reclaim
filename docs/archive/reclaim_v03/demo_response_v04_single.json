@@ -1,0 +1,99 @@
+{
+  "ok": true,
+  "newSchedule": [
+    {
+      "id": "paper_part_1",
+      "title": "写论文（第 1 部分）",
+      "start": "2026-05-11T09:00:00",
+      "end": "2026-05-11T11:00:00",
+      "priority": "A",
+      "status": "in_progress",
+      "kind": "work",
+      "deadline": "2026-05-11T18:00:00",
+      "project": "毕业论文"
+    },
+    {
+      "id": "buffer_2026-05-11_1",
+      "title": "缓冲时间",
+      "start": "2026-05-11T11:00:00",
+      "end": "2026-05-11T11:10:00",
+      "priority": "C",
+      "status": "not_started",
+      "kind": "buffer"
+    },
+    {
+      "id": "paper_part_2",
+      "title": "写论文（第 2 部分）",
+      "start": "2026-05-11T11:10:00",
+      "end": "2026-05-11T11:50:00",
+      "priority": "A",
+      "status": "in_progress",
+      "kind": "work",
+      "deadline": "2026-05-11T18:00:00",
+      "project": "毕业论文"
+    },
+    {
+      "id": "buffer_2026-05-11_3",
+      "title": "缓冲时间",
+      "start": "2026-05-11T11:50:00",
+      "end": "2026-05-11T12:00:00",
+      "priority": "C",
+      "status": "not_started",
+      "kind": "buffer"
+    },
+    {
+      "id": "meeting",
+      "title": "组会",
+      "start": "2026-05-11T14:00:00",
+      "end": "2026-05-11T15:00:00",
+      "priority": "S",
+      "status": "not_started",
+      "kind": "work"
+    },
+    {
+      "id": "buffer_2026-05-11_5",
+      "title": "缓冲时间",
+      "start": "2026-05-11T15:00:00",
+      "end": "2026-05-11T15:10:00",
+      "priority": "C",
+      "status": "not_started",
+      "kind": "buffer"
+    },
+    {
+      "id": "slides",
+      "title": "做PPT",
+      "start": "2026-05-11T15:10:00",
+      "end": "2026-05-11T16:10:00",
+      "priority": "B",
+      "status": "not_started",
+      "kind": "work"
+    },
+    {
+      "id": "buffer_2026-05-11_7",
+      "title": "缓冲时间",
+      "start": "2026-05-11T16:10:00",
+      "end": "2026-05-11T16:20:00",
+      "priority": "C",
+      "status": "not_started",
+      "kind": "buffer"
+    },
+    {
+      "id": "refs",
+      "title": "整理参考文献",
+      "start": "2026-05-11T16:20:00",
+      "end": "2026-05-11T17:00:00",
+      "priority": "C",
+      "status": "not_started",
+      "kind": "work",
+      "is_low_load": true,
+      "project": "毕业论文"
+    }
+  ],
+  "messages": [
+    "写论文 延长 40 分钟；后续任务按优先级重排。"
+  ],
+  "explanation": "写论文 延长 40 分钟；后续任务按优先级重排。",
+  "versionId": "replan_20260509_231900_e12e9be0",
+  "undoToken": "replan_20260509_231900_e12e9be0",
+  "undoExpiresAt": "2026-05-09T23:29:00"
+}
