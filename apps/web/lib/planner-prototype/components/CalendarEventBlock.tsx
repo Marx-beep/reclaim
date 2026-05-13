@@ -37,45 +37,45 @@ interface CalendarEventBlockProps {
 
 const eventStyles = {
   focus: {
-    background: "#dcfce7",
+    background: "#def7e8",
     border: "#86efac",
     text: "#166534",
     strip: "#22c55e",
     Icon: Sparkles
   },
   task: {
-    background: "#dbeafe",
+    background: "#e4efff",
     border: "#93c5fd",
     text: "#1e40af",
     strip: "#3b82f6",
     Icon: CheckSquare
   },
   meeting: {
-    background: "#fef3c7",
+    background: "#fff4d6",
     border: "#fcd34d",
     text: "#92400e",
     strip: "#f59e0b",
     Icon: Users
   },
   habit: {
-    background: "#fce7f3",
+    background: "#fdeaf3",
     border: "#f9a8d4",
     text: "#9d174d",
     strip: "#ec4899",
     Icon: Repeat
   },
   break: {
-    background: "#fee2e2",
-    border: "#fca5a5",
-    text: "#991b1b",
-    strip: "#ef4444",
+    background: "#fff1f5",
+    border: "#f5b5cf",
+    text: "#be185d",
+    strip: "#ec4899",
     Icon: Coffee
   },
   buffer: {
-    background: "#e5e7eb",
-    border: "#d1d5db",
-    text: "#374151",
-    strip: "#64748b",
+    background: "#eef2ff",
+    border: "#c7d2fe",
+    text: "#4338ca",
+    strip: "#6366f1",
     Icon: Clock3
   }
 } as const;
@@ -83,13 +83,13 @@ const eventStyles = {
 const changeToneClasses: Record<ReplanChangeType, string> = {
   moved: "ring-2 ring-sky-300/80",
   resized: "ring-2 ring-violet-300/80",
-  inserted: "ring-2 ring-emerald-300/80",
+  inserted: "ring-2 ring-emerald-300/80 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]",
   completed: "ring-2 ring-emerald-400/70",
   deleted: "ring-2 ring-rose-300/80",
   split: "ring-2 ring-amber-300/80",
-  buffered: "ring-2 ring-orange-300/80",
+  buffered: "ring-2 ring-orange-300/80 shadow-[0_0_0_3px_rgba(251,146,60,0.12)]",
   unscheduled: "ring-2 ring-slate-300/80",
-  replanned: "ring-2 ring-indigo-300/80"
+  replanned: "ring-2 ring-indigo-300/80 shadow-[0_0_0_3px_rgba(99,102,241,0.12)]"
 };
 
 const changeLabels: Record<ReplanChangeType, string> = {
@@ -129,6 +129,10 @@ export function CalendarEventBlock({
   const isInterrupted = event.status === "interrupted";
   const isOvertime = event.status === "overtime";
   const isUnscheduled = event.status === "unscheduled";
+  const isCompact = event.duration <= 0.75;
+  const isTiny = event.duration <= 0.5;
+  const isAiAdjusted =
+    event.aiGenerated || changeType === "inserted" || changeType === "buffered" || changeType === "replanned";
 
   const surfaceStyle = isDone
     ? { backgroundColor: "#ecfdf5", borderColor: "#86efac", color: "#166534" }
@@ -143,7 +147,7 @@ export function CalendarEventBlock({
       : isInterrupted
         ? "已拆分"
         : isLocked
-          ? "固定"
+          ? "锁定"
           : event.flexible
             ? "可调整"
             : null;
@@ -156,7 +160,7 @@ export function CalendarEventBlock({
         ? "bg-amber-100 text-amber-700"
         : isLocked
           ? "bg-slate-200 text-slate-700"
-          : "bg-white/70 text-slate-700";
+          : "bg-white/75 text-slate-700";
 
   const canAdapt = !isLocked && event.status !== "completed" && event.status !== "unscheduled";
 
@@ -172,36 +176,36 @@ export function CalendarEventBlock({
           onClick();
         }
       }}
-      className={`group relative overflow-hidden rounded-lg border p-2 text-left text-[12px] shadow-soft transition ${
-        isDragging ? "opacity-45" : "hover:-translate-y-[1px] hover:shadow-hover"
+      className={`group relative overflow-hidden rounded-[10px] border px-2 py-1.5 text-left text-[11px] shadow-[0_1px_1px_rgba(15,23,42,0.08)] transition ${
+        isDragging ? "cursor-grabbing opacity-50 shadow-[0_10px_24px_rgba(15,23,42,0.14)]" : "hover:-translate-y-[1px] hover:shadow-[0_6px_16px_rgba(15,23,42,0.10)]"
       } ${isOptimizing && event.flexible ? "animate-[pulse_1.2s_ease-in-out_infinite]" : ""} ${
         isDone ? "opacity-75" : isUnscheduled ? "opacity-55" : isMuted ? "opacity-35 saturate-[0.75]" : "opacity-100"
       } ${isLocked ? "cursor-not-allowed" : "cursor-grab"} ${event.flexible && !isLocked ? "border-dashed" : ""} ${
         changeType ? `${changeToneClasses[changeType]} animate-[pulse_1.4s_ease-in-out_2]` : ""
-      } ${className}`}
+      } ${isAiAdjusted && !isDone && !isUnscheduled ? "shadow-[0_10px_24px_rgba(249,115,22,0.14)]" : ""} select-none touch-none ${className}`}
       style={{ ...surfaceStyle, ...style }}
       {...(isLocked ? {} : dragAttributes)}
       {...(isLocked ? {} : dragListeners)}
     >
-      <span className="absolute inset-y-0 left-0 w-1.5 rounded-l-lg" style={{ backgroundColor: meta.strip }} />
+      <span className="absolute inset-y-0 left-0 w-1 rounded-l-[10px]" style={{ backgroundColor: meta.strip }} />
 
-      <div className="pl-2">
+      <div className="pl-1.5">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <Icon className="h-3.5 w-3.5 shrink-0" />
-              <span className={`truncate font-medium leading-4 ${isDone ? "line-through" : ""}`}>{event.title}</span>
+              <span className={`truncate text-[11px] font-semibold leading-4 ${isDone ? "line-through" : ""}`}>{event.title}</span>
               {isLocked ? <Lock className="h-3 w-3 shrink-0 opacity-75" /> : null}
               {isOvertime ? <AlertTriangle className="h-3 w-3 shrink-0 opacity-75" /> : null}
             </div>
-            <div className="mt-1 text-[11px] opacity-80">{formatEventTimeRange(event)}</div>
+            <div className="mt-0.5 text-[10px] opacity-80">{formatEventTimeRange(event)}</div>
           </div>
 
-          {!isOverlay ? (
+          {!isOverlay && !isCompact ? (
             <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
               <button
                 type="button"
-                className="rounded-md bg-white/75 p-1 text-slate-600 shadow-soft transition hover:bg-white"
+                className="rounded-md bg-white/85 p-1 text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.08)] transition hover:bg-white"
                 onClick={(buttonEvent) => {
                   buttonEvent.stopPropagation();
                   onMarkDone();
@@ -211,7 +215,7 @@ export function CalendarEventBlock({
               </button>
               <button
                 type="button"
-                className="rounded-md bg-white/75 p-1 text-slate-600 shadow-soft transition hover:bg-white"
+                className="rounded-md bg-white/85 p-1 text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.08)] transition hover:bg-white"
                 onClick={(buttonEvent) => {
                   buttonEvent.stopPropagation();
                   onReschedule();
@@ -222,7 +226,7 @@ export function CalendarEventBlock({
               <button
                 type="button"
                 disabled={!canAdapt}
-                className="rounded-md bg-white/75 p-1 text-slate-600 shadow-soft transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-md bg-amber-50/95 p-1 text-amber-700 shadow-[0_1px_2px_rgba(15,23,42,0.08)] transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
                 onClick={(buttonEvent) => {
                   buttonEvent.stopPropagation();
                   onCannotContinue();
@@ -233,7 +237,7 @@ export function CalendarEventBlock({
               </button>
               <button
                 type="button"
-                className="rounded-md bg-white/75 p-1 text-slate-600 shadow-soft transition hover:bg-white"
+                className="rounded-md bg-white/85 p-1 text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.08)] transition hover:bg-white"
                 onClick={(buttonEvent) => {
                   buttonEvent.stopPropagation();
                   onMoreAction();
@@ -245,30 +249,37 @@ export function CalendarEventBlock({
           ) : null}
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <div className="inline-flex rounded-full bg-white/60 px-2 py-0.5 text-[10px] font-medium text-slate-700">
-            {priorityLabel(event.priority)}
+        {!isTiny ? (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+            <div className="inline-flex rounded-full bg-white/70 px-2 py-0.5 text-[9px] font-medium text-slate-700">
+              {priorityLabel(event.priority)}
+            </div>
+            {statusBadge ? <div className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-medium ${statusBadgeTone}`}>{statusBadge}</div> : null}
+            {isAiAdjusted ? (
+              <div className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-semibold text-amber-700">
+                AI 重排
+              </div>
+            ) : null}
           </div>
-          {statusBadge ? <div className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadgeTone}`}>{statusBadge}</div> : null}
-        </div>
+        ) : null}
 
-        {changeType ? (
+        {changeType && !isCompact ? (
           <div className="mt-1">
-            <div className="inline-flex rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+            <div className="inline-flex rounded-full bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-slate-700">
               {changeLabels[changeType]}
             </div>
           </div>
         ) : null}
       </div>
 
-      {!isOverlay && canAdapt ? (
+      {!isOverlay && canAdapt && !isTiny ? (
         <button
           type="button"
           aria-label="调整时长"
           onPointerDown={onResizeStart}
-          className="absolute inset-x-4 bottom-1 flex h-3 cursor-ns-resize items-center justify-center rounded-full opacity-0 transition group-hover:opacity-100"
+          className="absolute inset-x-3 bottom-1 flex h-3.5 cursor-ns-resize items-center justify-center rounded-full opacity-0 transition group-hover:opacity-100"
         >
-          <span className="h-1 w-10 rounded-full bg-slate-500/50" />
+          <span className="h-1 w-8 rounded-full bg-slate-500/45" />
         </button>
       ) : null}
     </div>

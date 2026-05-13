@@ -133,6 +133,34 @@ export interface AiLog {
   warnings: string[];
 }
 
+export interface GiveUpFeedbackStep {
+  id: string;
+  label: string;
+  title: string;
+  detail: string;
+  startHour: number;
+  endHour?: number;
+  tone: "focus" | "recovery" | "light" | "resume";
+}
+
+export interface GiveUpFeedback {
+  sourceEventId: string;
+  sourceTitle: string;
+  day: number;
+  dayLabel: string;
+  originalStartHour: number;
+  originalEndHour: number;
+  originalFocusMinutes: number;
+  immediateFocusMinutes: number;
+  recoveryMinutes: number;
+  lightTaskMinutes: number;
+  resumedAtHour: number;
+  affectedTaskCount: number;
+  steps: GiveUpFeedbackStep[];
+  changes: string[];
+  warnings: string[];
+}
+
 export interface PlannerSettings {
   workStart: number;
   workEnd: number;

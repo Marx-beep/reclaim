@@ -4,6 +4,7 @@ import type {
   AiLog,
   CalendarEvent,
   EventPriority,
+  GiveUpFeedback,
   NavigationSection,
   PlannerSuggestion,
   QuickTaskInput,
@@ -48,8 +49,11 @@ interface RightTaskPanelProps {
   aiLogs: AiLog[];
   latestSummary: string | null;
   latestWarnings: string[];
+  giveUpFeedback: GiveUpFeedback | null;
   focusHours: number;
   meetingHours: number;
+  requestedView?: PanelView | null;
+  requestedViewToken?: number;
   onOpen: () => void;
   onClose: () => void;
   onSelectTask: (eventId: string) => void;
@@ -67,6 +71,12 @@ interface RightTaskPanelProps {
 
 const priorityOptions: EventPriority[] = ["P1", "P2", "P3", "P4"];
 const dayLabels = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+const giveUpStepToneClasses: Record<GiveUpFeedback["steps"][number]["tone"], string> = {
+  focus: "border-sky-200 bg-sky-50/80",
+  recovery: "border-amber-200 bg-amber-50/80",
+  light: "border-emerald-200 bg-emerald-50/80",
+  resume: "border-violet-200 bg-violet-50/80"
+};
 const dueTimeOptions = Array.from({ length: (19 - 8) * 4 + 1 }, (_, index) => {
   const value = 8 + index * 0.25;
   return { value, label: formatTime(value) };
@@ -171,8 +181,11 @@ export function RightTaskPanel({
   aiLogs,
   latestSummary,
   latestWarnings,
+  giveUpFeedback,
   focusHours,
   meetingHours,
+  requestedView = null,
+  requestedViewToken = 0,
   onOpen,
   onClose,
   onSelectTask,
@@ -243,6 +256,14 @@ export function RightTaskPanel({
   const overtimeEvents = allEvents.filter((event) => event.status === "overtime");
   const focusScore = Math.min(100, Math.round((focusHours / Math.max(meetingHours + focusHours, 1)) * 100));
   const interruptionCount = aiLogs.filter((log) => log.action.includes("干不下去了")).length;
+  const latestGiveUpLog = aiLogs[0]?.action.includes("干不下去了") ? aiLogs[0] : null;
+
+  useEffect(() => {
+    if (!requestedView) {
+      return;
+    }
+    setPanelView(requestedView);
+  }, [requestedView, requestedViewToken]);
 
   if (!isOpen) {
     return (
@@ -264,7 +285,7 @@ export function RightTaskPanel({
 
   return (
     <aside className="flex h-full w-[340px] shrink-0 flex-col border-l border-[#e5e7eb] bg-white">
-      <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-5 pr-3">
+      <div className="planner-side-scroll flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-5 pr-4">
         <section className="flex items-center justify-between rounded-2xl border border-[#e8ebf3] bg-slate-50 px-4 py-3 shadow-soft">
           <div>
             <div className="text-[12px] font-semibold text-slate-900">{focusedDayLabel}</div>
@@ -684,6 +705,105 @@ export function RightTaskPanel({
               <Sparkles className="h-4 w-4 text-indigo-600" />
               <span>AI 重排日志</span>
             </div>
+            {giveUpFeedback ? (
+              <div className="mt-3 rounded-[24px] border border-amber-200 bg-[linear-gradient(180deg,#fff7ed_0%,#fffbeb_100%)] px-4 py-4 shadow-[0_12px_30px_rgba(245,158,11,0.12)]">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-900">
+                      恢复方案已应用
+                    </div>
+                    <div className="mt-2 text-[18px] font-semibold leading-6 text-slate-950">“{giveUpFeedback.sourceTitle}”已经被拆成更容易继续的节奏</div>
+                    <div className="mt-2 text-[12px] leading-5 text-amber-900">
+                      这次展示的是点击后真实落进日历里的结果，不是点击前预演。你现在看到的是系统已经执行完的恢复方案。
+                    </div>
+                  </div>
+                  <div className="min-w-[82px] rounded-2xl border border-amber-100 bg-white/80 px-3 py-2 text-right">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">{giveUpFeedback.dayLabel}</div>
+                    <div className="mt-1 text-[22px] font-semibold leading-none text-slate-950">{giveUpFeedback.affectedTaskCount}</div>
+                    <div className="mt-1 text-[11px] text-slate-500">个块联动</div>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-amber-100 bg-white/85 p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">原计划</div>
+                  <div className="mt-1 text-[14px] font-semibold text-slate-950">
+                    {formatTime(giveUpFeedback.originalStartHour)} - {formatTime(giveUpFeedback.originalEndHour)} {giveUpFeedback.sourceTitle}
+                  </div>
+
+                  <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">点击后实际变成</div>
+                  <div className="mt-3 space-y-2">
+                    {giveUpFeedback.steps.map((step) => (
+                      <div key={step.id} className={`rounded-xl border p-3 ${giveUpStepToneClasses[step.tone]}`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-[11px] font-semibold text-slate-500">{step.label}</div>
+                            <div className="mt-1 text-[13px] font-semibold text-slate-950">{step.title}</div>
+                            <div className="mt-1 text-[11px] leading-5 text-slate-600">{step.detail}</div>
+                          </div>
+                          <div className="shrink-0 rounded-lg bg-white/90 px-2 py-1 text-[11px] font-semibold text-slate-700">
+                            {formatTime(step.startHour)} - {step.endHour ? formatTime(step.endHour) : "之后"}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-amber-100 bg-white/80 px-3 py-3">
+                    <div className="text-[11px] text-slate-500">连续高强度</div>
+                    <div className="mt-1 text-[15px] font-semibold text-slate-950">
+                      {giveUpFeedback.originalFocusMinutes} → {giveUpFeedback.immediateFocusMinutes} 分钟
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-amber-100 bg-white/80 px-3 py-3">
+                    <div className="text-[11px] text-slate-500">恢复时间</div>
+                    <div className="mt-1 text-[15px] font-semibold text-slate-950">{giveUpFeedback.recoveryMinutes} 分钟</div>
+                  </div>
+                  <div className="rounded-xl border border-amber-100 bg-white/80 px-3 py-3">
+                    <div className="text-[11px] text-slate-500">轻量任务</div>
+                    <div className="mt-1 text-[15px] font-semibold text-slate-950">{giveUpFeedback.lightTaskMinutes} 分钟</div>
+                  </div>
+                  <div className="rounded-xl border border-amber-100 bg-white/80 px-3 py-3">
+                    <div className="text-[11px] text-slate-500">续做开始</div>
+                    <div className="mt-1 text-[15px] font-semibold text-slate-950">{formatTime(giveUpFeedback.resumedAtHour)}</div>
+                  </div>
+                </div>
+
+                {giveUpFeedback.changes.length > 0 ? (
+                  <div className="mt-4 rounded-2xl border border-amber-100 bg-white/85 px-3 py-3">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">系统这次做了什么</div>
+                    <div className="mt-2 space-y-1.5 text-[11px] leading-5 text-slate-700">
+                      {giveUpFeedback.changes.map((change) => (
+                        <div key={change}>- {change}</div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {giveUpFeedback.warnings.length > 0 ? (
+                  <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-[12px] leading-5 text-amber-900">
+                    {giveUpFeedback.warnings.map((warning) => (
+                      <div key={warning}>- {warning}</div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : latestGiveUpLog ? (
+              <div className="mt-3 rounded-2xl border border-amber-200 bg-[linear-gradient(180deg,#fff7ed_0%,#fffbeb_100%)] px-4 py-4 shadow-[0_8px_24px_rgba(245,158,11,0.10)]">
+                <div className="text-[13px] font-semibold text-amber-950">已触发“干不下去了”模式</div>
+                <div className="mt-2 text-[12px] leading-5 text-amber-900">
+                  系统已经按疲惫状态重排：先停下高强度任务，插入恢复时间，再切到更轻量的任务，最后把续做块后移。
+                </div>
+                {latestGiveUpLog.changes.length > 0 ? (
+                  <div className="mt-3 rounded-xl border border-amber-100 bg-white/80 px-3 py-3 text-[11px] text-amber-900">
+                    {latestGiveUpLog.changes.slice(0, 4).map((change) => (
+                      <div key={change}>- {change}</div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             {latestSummary ? <div className="mt-3 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-[12px] leading-5 text-sky-800">{latestSummary}</div> : null}
             {latestWarnings.length > 0 ? (
               <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-[12px] leading-5 text-amber-800">

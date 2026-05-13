@@ -37,6 +37,7 @@ import type {
   CalendarEvent,
   EventPriority,
   FocusPlan,
+  GiveUpFeedback,
   HabitItem,
   NavigationSection,
   PlannerSettings,
@@ -44,6 +45,7 @@ import type {
   QuickTaskInput,
   ReplanAction,
   ReplanChangeType,
+  ReplanResult,
   SchedulingLinkItem,
   SmartMeetingItem,
   TaskItem
@@ -136,9 +138,12 @@ export default function App() {
   const [aiLogs, setAiLogs] = useState<AiLog[]>(initialAiLogs);
   const [latestSummary, setLatestSummary] = useState<string | null>(initialAiLogs[0]?.summary ?? null);
   const [latestWarnings, setLatestWarnings] = useState<string[]>([]);
+  const [giveUpFeedback, setGiveUpFeedback] = useState<GiveUpFeedback | null>(null);
   const [recentChangeMap, setRecentChangeMap] = useState<Record<string, ReplanChangeType>>({});
   const [activeSection, setActiveSection] = useState<NavigationSection>("Planner");
   const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [requestedPanelView, setRequestedPanelView] = useState<"plan" | "details" | "ai" | null>(null);
+  const [requestedPanelViewToken, setRequestedPanelViewToken] = useState(0);
   const [selectedSlot, setSelectedSlot] = useState<{ day: number; startHour: number } | null>(null);
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(2026, 4, 11), { weekStartsOn: 0 }));
   const [focusedDayIndex, setFocusedDayIndex] = useState(TODAY_INDEX);
@@ -245,6 +250,110 @@ export default function App() {
   }, [recentChangeMap]);
 
   const showToast = (message: string) => setToast({ id: Date.now(), message });
+  const requestPanelView = (view: "plan" | "details" | "ai") => {
+    setRequestedPanelView(view);
+    setRequestedPanelViewToken((current) => current + 1);
+  };
+  const buildGiveUpFeedback = (sourceEvent: CalendarEvent, result: ReplanResult): GiveUpFeedback => {
+    const currentSegment = result.events.find((event) => event.id === sourceEvent.id) ?? sourceEvent;
+    const resumeTitle = `${sourceEvent.title}（继续）`;
+    const breakBlock =
+      result.events.find(
+        (event) =>
+          event.day === sourceEvent.day &&
+          event.type === "break" &&
+          event.aiGenerated &&
+          Math.abs(event.startHour - (currentSegment.startHour + currentSegment.duration)) < 0.01
+      ) ?? null;
+    const resumeBlock =
+      result.events.find(
+        (event) => event.day === sourceEvent.day && event.title === resumeTitle && event.status === "interrupted"
+      ) ?? null;
+    const lightBlock =
+      result.events.find(
+        (event) =>
+          event.day === sourceEvent.day &&
+          event.id !== sourceEvent.id &&
+          event.title !== resumeTitle &&
+          event.title !== "休息 / 缓冲" &&
+          (!breakBlock || event.startHour >= breakBlock.startHour + breakBlock.duration) &&
+          (!resumeBlock || event.startHour < resumeBlock.startHour)
+      ) ?? null;
+
+    const originalEndHour = sourceEvent.startHour + sourceEvent.duration;
+    const currentEndHour = currentSegment.startHour + currentSegment.duration;
+    const changes = result.latestLog.changes.slice(0, 6);
+    const affectedTaskCount = result.changes.filter((change) =>
+      ["moved", "resized", "replanned", "buffered", "inserted"].includes(change.type)
+    ).length;
+
+    return {
+      sourceEventId: sourceEvent.id,
+      sourceTitle: sourceEvent.title,
+      day: sourceEvent.day,
+      dayLabel: dayNames[sourceEvent.day] ?? "当天",
+      originalStartHour: sourceEvent.startHour,
+      originalEndHour,
+      originalFocusMinutes: Math.round(sourceEvent.duration * 60),
+      immediateFocusMinutes: Math.round(currentSegment.duration * 60),
+      recoveryMinutes: Math.round((breakBlock?.duration ?? 0) * 60),
+      lightTaskMinutes: Math.round((lightBlock?.duration ?? 0) * 60),
+      resumedAtHour: resumeBlock?.startHour ?? originalEndHour,
+      affectedTaskCount,
+      steps: [
+        {
+          id: "focus",
+          label: "先收一小段",
+          title: currentSegment.title,
+          detail: "先保留一段更容易完成的小闭环，避免继续硬顶整块高强度任务。",
+          startHour: sourceEvent.startHour,
+          endHour: currentEndHour,
+          tone: "focus"
+        },
+        ...(breakBlock
+          ? [
+              {
+                id: "recovery",
+                label: "恢复一下",
+                title: breakBlock.title,
+                detail: "强制插入一个明确的恢复点，先把注意力和压力拉下来。",
+                startHour: breakBlock.startHour,
+                endHour: breakBlock.startHour + breakBlock.duration,
+                tone: "recovery" as const
+              }
+            ]
+          : []),
+        ...(lightBlock
+          ? [
+              {
+                id: "light",
+                label: "切轻任务",
+                title: lightBlock.title,
+                detail: "改做更轻的事，维持推进感，但不继续消耗同一类高能量注意力。",
+                startHour: lightBlock.startHour,
+                endHour: lightBlock.startHour + lightBlock.duration,
+                tone: "light" as const
+              }
+            ]
+          : []),
+        ...(resumeBlock
+          ? [
+              {
+                id: "resume",
+                label: "稍后续做",
+                title: resumeBlock.title,
+                detail: "主任务没有消失，只是被延后到更容易重新进入状态的时段。",
+                startHour: resumeBlock.startHour,
+                endHour: resumeBlock.startHour + resumeBlock.duration,
+                tone: "resume" as const
+              }
+            ]
+          : [])
+      ],
+      changes,
+      warnings: result.warnings
+    };
+  };
 
   const pushAiLog = (action: string, summary: string, changes: string[] = [], warnings: string[] = []) => {
     const log: AiLog = {
@@ -260,7 +369,11 @@ export default function App() {
     setLatestWarnings(warnings);
   };
 
-  const runReplan = async (action: ReplanAction, successMessage: string, options?: { removeTaskId?: string }) => {
+  const runReplan = async (
+    action: ReplanAction,
+    successMessage: string,
+    options?: { removeTaskId?: string }
+  ): Promise<ReplanResult> => {
     const result = await requestScheduleReplan({
       currentEvents: events,
       currentTasks: tasks,
@@ -273,6 +386,9 @@ export default function App() {
     setAiLogs((current) => [result.latestLog, ...current].slice(0, 10));
     setLatestSummary(result.summary);
     setLatestWarnings(result.warnings);
+    if (action.kind !== "give_up") {
+      setGiveUpFeedback(null);
+    }
     setRecentChangeMap(
       result.changes.reduce<Record<string, ReplanChangeType>>((acc, change) => {
         acc[change.eventId] = change.type;
@@ -287,6 +403,7 @@ export default function App() {
     }
 
     showToast(successMessage);
+    return result;
   };
 
   const getLinkedScheduledEvent = (taskId: string) =>
@@ -389,12 +506,12 @@ export default function App() {
     );
   };
 
-  const handleCannotContinue = (eventId: string) => {
+  const handleCannotContinue = async (eventId: string) => {
     const target = events.find((event) => event.id === eventId);
     if (!target) {
       return;
     }
-    void runReplan(
+    const result = await runReplan(
       {
         kind: "give_up",
         eventId,
@@ -403,6 +520,14 @@ export default function App() {
       },
       "已插入恢复时间，并切到更轻量的任务"
     );
+    setGiveUpFeedback(buildGiveUpFeedback(target, result));
+  };
+
+  const runGiveUpAndShowFeedback = (eventId: string) => {
+    void handleCannotContinue(eventId);
+    setSelectedEventId(null);
+    setIsPanelOpen(true);
+    requestPanelView("ai");
   };
 
   const handleReschedule = (eventId: string) => {
@@ -1117,7 +1242,7 @@ export default function App() {
               onTogglePanel={() => setIsPanelOpen((current) => !current)}
               onAutoSchedule={handleAutoSchedule}
             />
-            <div className="min-h-0 flex-1 px-6 pb-6">
+            <div className="flex min-h-0 flex-1 flex-col px-4 pb-4">
               <CalendarGrid
                 events={events}
                 weekStart={weekStart}
@@ -1136,7 +1261,7 @@ export default function App() {
                 onEventResize={handleAdjustDuration}
                 onMarkDone={handleMarkDone}
                 onReschedule={handleReschedule}
-                onCannotContinue={handleCannotContinue}
+                onCannotContinue={runGiveUpAndShowFeedback}
                 onMoreAction={(eventId) => {
                   setSelectedEventId(eventId);
                   setIsPanelOpen(true);
@@ -1247,8 +1372,11 @@ export default function App() {
           aiLogs={aiLogs}
           latestSummary={latestSummary}
           latestWarnings={latestWarnings}
+          giveUpFeedback={giveUpFeedback}
           focusHours={focusHours}
           meetingHours={meetingHours}
+          requestedView={requestedPanelView}
+          requestedViewToken={requestedPanelViewToken}
           onOpen={() => setIsPanelOpen(true)}
           onClose={() => setIsPanelOpen(false)}
           onSelectTask={setSelectedEventId}
@@ -1270,12 +1398,37 @@ export default function App() {
         linkedTask={linkedTask}
         onClose={() => setSelectedEventId(null)}
         onAdjustDuration={handleAdjustDuration}
-        onMarkDone={handleMarkDone}
-        onReschedule={handleReschedule}
-        onCannotContinue={handleCannotContinue}
-        onEarlyComplete={handleEarlyComplete}
-        onMarkOvertime={handleMarkOvertime}
-        onDelete={handleDelete}
+        onMarkDone={(eventId) => {
+          handleMarkDone(eventId);
+          setSelectedEventId(null);
+          setIsPanelOpen(true);
+          requestPanelView("ai");
+        }}
+        onReschedule={(eventId) => {
+          handleReschedule(eventId);
+          setSelectedEventId(null);
+          setIsPanelOpen(true);
+          requestPanelView("ai");
+        }}
+        onCannotContinue={runGiveUpAndShowFeedback}
+        onEarlyComplete={(eventId, completedAtHour) => {
+          handleEarlyComplete(eventId, completedAtHour);
+          setSelectedEventId(null);
+          setIsPanelOpen(true);
+          requestPanelView("ai");
+        }}
+        onMarkOvertime={(eventId, overtimeHours) => {
+          handleMarkOvertime(eventId, overtimeHours);
+          setSelectedEventId(null);
+          setIsPanelOpen(true);
+          requestPanelView("ai");
+        }}
+        onDelete={(eventId) => {
+          handleDelete(eventId);
+          setSelectedEventId(null);
+          setIsPanelOpen(true);
+          requestPanelView("ai");
+        }}
       />
 
       <InfoModal

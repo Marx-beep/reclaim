@@ -2,20 +2,30 @@
 
 ## 本轮目标
 
-把现有 `apps/planner-prototype` 中完成的 AI Planner 原型，增量并入主前端 `apps/web`，不直接覆盖现有首页和现有日历页，先形成一个可访问、可演示、可后续提 PR 的正式前端入口。
+将 `apps/planner-prototype` 中完成的 AI Planner 原型，增量接入主前端 `apps/web`，先形成一个可访问、可演示、可继续联调的正式入口 `/planner`，不直接覆盖现有首页或现有 `calendar` 页面。
 
 ## 当前落地结果
 
-- 已将原型接入主前端新路由：`/planner`
+- 已在主前端新增路由：`/planner`
 - 已在主前端左侧导航加入 `AI Planner` 入口
-- 已保留原型中的核心能力：
+- 原型的核心交互已一并迁入：
   - 动态日程重排
   - “干不下去了”按钮
-  - 拖动 / 压缩 / 延长时间块
-  - 右侧 AI 解释面板
+  - 时间块拖动 / 压缩 / 延长
+  - 右侧 AI 建议与重排解释
   - 历史效率分析
   - 一键重新规划
   - 多方案模拟
+
+## 本轮新增修复
+
+本轮继续修了 `/planner` 在主前端中的可用性问题，重点是：
+
+- 调整了全局视觉底色，往更接近 Reclaim 的冷灰蓝 SaaS 风格收拢
+- 放大并强化了滚动条样式，提升灰色滚动条的可见性和可抓取性
+- 为滚动容器增加 `scrollbar-gutter`，给右侧滚动条保留稳定热区
+- 重新整理日历滚动层与拖拽层的结构，降低滚动条与事件拖拽抢鼠标事件的概率
+- 重写了 `CalendarGrid` 的日历滚动与预览提示结构，清掉一部分乱码提示文案
 
 ## 主要改动文件
 
@@ -35,21 +45,12 @@
 - `apps/web/lib/planner-prototype/types/calendar.ts`
 - `apps/web/lib/planner-prototype/utils/*`
 
-## 为什么先这样接
-
-这次没有直接替换 `apps/web/app/(dashboard)/calendar/page.tsx`，而是先新建 `/planner`，原因是：
-
-1. 现有主前端是 `Next.js`
-2. 原型最初是独立的 `Vite + React` 结构
-3. 先独立接入更适合协作，不会一下子撞坏现有 `calendar / dashboard`
-4. 后续如果评审通过，再决定是否替换现有正式日历页
-
-## 当前可访问方式
+## 当前访问方式
 
 在仓库根目录运行：
 
 ```bat
-cd /d "E:\No plan\reclaim-main"
+cd /d "E:\reclaim"
 pnpm.cmd --filter @reclaim/web dev
 ```
 
@@ -57,65 +58,95 @@ pnpm.cmd --filter @reclaim/web dev
 
 - `http://localhost:3000/planner`
 
-## 已验证
+## 已验证内容
 
-已通过：
+在工作副本中已验证：
 
 ```bat
 pnpm.cmd --filter @reclaim/web build
-pnpm.cmd --filter @reclaim/web typecheck
 ```
 
-## 待继续优化项
+说明：
 
-这几项适合下一轮继续推进：
+- `build` 已通过
+- `typecheck` 目前仍会受 `apps/web/tsconfig.json` 中 `.next/types/**/*.ts` include 规则影响
+- 这个 `typecheck` 问题是仓库当前配置问题，不是本轮 `/planner` 集成新增的问题
 
-1. 把 `/planner` 和现有真实 API 对接，而不是只用 mock 数据
-2. 决定是否把原型并入现有 `calendar` 页，而不是保留独立入口
-3. 继续统一主前端和原型页面的视觉语言，减少“两个系统拼在一起”的感觉
-4. 补充与现有任务、习惯、链接、设置接口的双向同步
-5. 评估是否保留原型自带侧边栏，还是改为完全复用主站导航
+补充验证（2026-05-13 晚些时候）：
 
-## GitHub 协作状态
+- 使用本地浏览器无头校验过 `http://localhost:3000/planner`，页面样式正常加载
+- 本轮未复现此前的 hydration error
+- 首屏可见文案中，“Today” 已改为 “今天”
+- 滚动容器已补充 `.planner-scroll-shell` 与 `.planner-side-scroll`，并增加更稳定的右侧滚动热区
+- 当前仍会看到一条浏览器控制台 404 提示，但未抓到明确失败资源；页面本身返回 200，`/_next/static/css/app/layout.css` 也返回 200
 
-目标协作仓库按最早约定应为：
+## 当前待推送范围
 
-- `Marx-beep/reclaim`
+已检查真实仓库 `E:\reclaim` 的状态。
 
-当前阻塞点：
+本轮同步后，当前仍显示待提交的文件是：
 
-1. 当前工作目录不是一个真实 `.git` 仓库副本
-2. GitHub 连接器在本轮会话里启动失败，暂时无法直接发起远端写入
+- `apps/web/app/globals.css`
+- `apps/web/app/planner/page.tsx`
+- `apps/web/app/planner/planner-client.tsx`
+- `apps/web/lib/planner-prototype/components/CalendarEventBlock.tsx`
+- `apps/web/lib/planner-prototype/components/CalendarGrid.tsx`
+- `apps/web/lib/planner-prototype/components/RightTaskPanel.tsx`
+- `apps/web/lib/planner-prototype/data/mockEvents.ts`
+- `docs/planner-collab-handoff-2026-05-13.md`
 
-所以本轮已完成的是：
-
-- 代码并入主前端代码树
-- 协作备注落盘
-- 构建和类型检查通过
-
-待在真实 git 副本中执行的协作步骤：
+如果后续又继续同步了 `planner-prototype` 目录下的新改动，建议重新执行一次：
 
 ```bat
-git checkout main
-git pull origin main
-git checkout -b feature/planner-web-integration
-git add .
-git commit -m "feat(web): integrate ai planner prototype into /planner"
-git push origin feature/planner-web-integration
+cd /d E:\reclaim
+git status
 ```
 
-然后创建 PR，描述建议写清：
+注意：
 
-- `/planner` 新路由接入
-- AI Planner 原型源码迁入 `apps/web/lib/planner-prototype`
-- 主前端导航新增入口
-- 当前仍为 mock 驱动原型，未完全替换现有 `calendar`
+- `planner-export-web.ps1` 原先的 `Copy-DirectorySafe` 对目录复制有隐蔽问题：
+  - 使用了 `Copy-Item -LiteralPath (Join-Path $resolvedSource "*")`
+  - 日志会显示目录已复制，但 `planner-prototype` 下的嵌套文件不一定真的同步进 `E:\reclaim`
+- 这个问题本轮已修复为先 `Get-ChildItem`，再逐项 `Copy-Item`
+- 后续如果再次怀疑同步不完整，优先对 `CalendarGrid.tsx`、`RightTaskPanel.tsx` 之类关键文件做 hash 或内容核对，不要只看脚本日志
 
-## 给协作者的建议
+## 建议的下一次提交说明
 
-如果明天要继续协作，优先顺序建议是：
+如果要把这轮滚动条 / 视觉修复单独补一次提交，建议 commit message：
 
-1. 先在真实 git 仓库里提交这一轮接入
-2. 再决定是继续独立维护 `/planner`，还是开始替换正式日历页
-3. 如果要演示，优先展示 `/planner`
-4. 如果要联调后端，再从 `replan`、`tasks`、`habits` 三条链路开始接接口
+```txt
+fix(web): improve planner scrollbar usability and visual polish
+```
+
+PR / 备注可以说明：
+
+- 修复 `/planner` 右侧滚动条热区过窄、拖动不顺的问题
+- 优化日历滚动层与拖拽层结构
+- 调整全局色板，统一为更接近 Reclaim 的冷灰蓝风格
+
+## 为什么先独立接入 `/planner`
+
+这次没有直接替换 `apps/web/app/(dashboard)/calendar/page.tsx`，而是先新建 `/planner`，原因是：
+
+1. 现有主前端是 `Next.js`
+2. 原型最初是独立的 `Vite + React` 结构
+3. 先独立接入更适合协作，不会直接撞坏现有 dashboard / calendar
+4. 后续可以根据评审结果再决定是否合并替换正式日历页
+
+## 后续建议顺序
+
+1. 先把 `/planner` 的本轮滚动条与视觉修复再次提交到 GitHub
+2. 在浏览器中重新验证右侧灰色滚动条是否已可稳定拖动
+3. 继续修复剩余乱码文案，尤其是 `App.tsx`、`RightTaskPanel.tsx`、`CalendarEventBlock.tsx`
+4. 再考虑把 `/planner` 与现有真实 API 对接，而不是继续只依赖 mock 数据
+5. 最后再决定是否把 `/planner` 逐步并入正式 `calendar` 页面
+
+## 给协作者的提醒
+
+- 这条线当前最核心的演示入口是 `/planner`
+- 明早如果有人继续接手，优先检查：
+  - 右侧滚动条是否可拖
+  - 事件块拖拽是否顺手
+  - Lunch / Habit / Focus / Task 是否都按预期可移动
+  - 颜色是否仍有暖色残留
+  - 页面里是否还有乱码文案

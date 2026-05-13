@@ -4,8 +4,10 @@ import type { CalendarEvent, EventPriority, TaskItem } from "../types/calendar";
 
 export const WORK_DAY_START = 8;
 export const WORK_DAY_END = 19;
+export const DISPLAY_DAY_START = 0;
+export const DISPLAY_DAY_END = 24;
 export const WORKING_HOURS_PER_WEEK = (WORK_DAY_END - WORK_DAY_START) * 7;
-export const HOUR_HEIGHT = 72;
+export const HOUR_HEIGHT = 56;
 export const TODAY_INDEX = 1;
 
 export const PRIORITY_WEIGHT: Record<EventPriority, number> = {
@@ -81,6 +83,10 @@ export function formatEventTimeRange(event: Pick<CalendarEvent, "startHour" | "d
 export function formatWeekRange(start: Date) {
   const end = addDays(start, 6);
   return `${format(start, "M月d日", { locale: zhCN })} - ${format(end, "M月d日 yyyy年", { locale: zhCN })}`;
+}
+
+export function formatPlannerMonth(start: Date) {
+  return format(start, "MMMM yyyy", { locale: zhCN });
 }
 
 export function buildHeaderDays(start: Date) {

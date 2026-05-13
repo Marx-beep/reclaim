@@ -1,5 +1,5 @@
-import PlannerPrototypeApp from "@/lib/planner-prototype/App";
+import { PlannerClientPage } from "./planner-client";
 
 export default function PlannerPrototypePage() {
-  return <PlannerPrototypeApp />;
+  return <PlannerClientPage />;
 }

@@ -487,7 +487,10 @@ function applyAction(events: CalendarEvent[], tasks: TaskItem[], action: ReplanA
 
       const lighterTask = chooseLowEnergyTask(tasks);
       if (lighterTask) {
-        events.push(createEventFromTask(lighterTask, target.day, workedEnd + 0.25, 0.5, false));
+        events.push({
+          ...createEventFromTask(lighterTask, target.day, workedEnd + 0.25, 0.5, false),
+          aiGenerated: true
+        });
       } else {
         events.push({
           id: generateId("light"),
