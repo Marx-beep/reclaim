@@ -22,10 +22,10 @@ const navItems: Array<{
   { key: "Tasks", label: "任务", icon: CheckSquare },
   { key: "Habits", label: "习惯", icon: Repeat },
   { key: "Focus", label: "专注时间", icon: Clock3 },
-  { key: "Meetings", label: "智能会议", icon: Users },
+  { key: "Meetings", label: "会议", icon: Users },
   { key: "Links", label: "预约链接", icon: Link2 },
   { key: "Sync", label: "日历同步", icon: RefreshCw },
-  { key: "Analytics", label: "统计分析", icon: BarChart3 },
+  { key: "Analytics", label: "分析洞察", icon: BarChart3 },
   { key: "Settings", label: "设置", icon: Settings }
 ];
 
@@ -49,17 +49,17 @@ export function Sidebar({
   onOpenProfile
 }: SidebarProps) {
   return (
-    <aside className="flex h-full w-16 shrink-0 flex-col items-center border-r border-white/5 bg-[#111827] py-3 text-[#9ca3af]">
+    <aside className="flex h-full w-[74px] shrink-0 flex-col items-center border-r border-[#dbe4f0] bg-[linear-gradient(180deg,#f8fbff_0%,#f1f5f9_100%)] py-3 text-slate-500">
       <button
         type="button"
         onClick={onResetPlanner}
         title="回到日历工作台"
-        className="mb-7 grid grid-cols-2 gap-1 rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:bg-white/[0.09]"
+        className="mb-7 grid grid-cols-2 gap-1 rounded-[22px] border border-white/80 bg-white/90 p-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition hover:-translate-y-[1px]"
       >
-        <span className="h-3 w-3 rounded-[4px] bg-[#6366f1]" />
-        <span className="h-3 w-3 rounded-[4px] bg-[#f472b6]" />
-        <span className="h-3 w-3 rounded-[4px] bg-[#facc15]" />
-        <span className="h-3 w-3 rounded-[4px] bg-[#34d399]" />
+        <span className="h-3 w-3 rounded-[4px] bg-[#0f172a]" />
+        <span className="h-3 w-3 rounded-[4px] bg-[#2563eb]" />
+        <span className="h-3 w-3 rounded-[4px] bg-[#7dd3fc]" />
+        <span className="h-3 w-3 rounded-[4px] bg-[#cbd5e1]" />
       </button>
 
       <nav className="flex flex-1 flex-col items-center gap-2.5">
@@ -75,28 +75,28 @@ export function Sidebar({
                 onClick={() => onSelectSection(item.key)}
                 className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition ${
                   active
-                    ? "bg-[#374151] text-white shadow-[0_8px_20px_rgba(15,23,42,0.22)]"
-                    : "text-[#9ca3af] hover:bg-[#1f2937] hover:text-white"
+                    ? "border border-sky-100 bg-white text-slate-950 shadow-[0_12px_24px_rgba(37,99,235,0.12)]"
+                    : "text-slate-400 hover:bg-white/90 hover:text-slate-800"
                 }`}
                 title={item.label}
               >
-                {active ? <span className="absolute -left-2 h-6 w-1 rounded-full bg-indigo-400" /> : null}
+                {active ? <span className="absolute -left-3 h-6 w-1 rounded-full bg-sky-500" /> : null}
                 <Icon className="h-[18px] w-[18px]" />
                 {item.key === "Sync" ? (
                   <span
-                    className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-[#111827] ${
+                    className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-white ${
                       syncHealthy ? "bg-emerald-400" : "bg-amber-400"
                     }`}
                   />
                 ) : null}
                 {badge ? (
-                  <span className="absolute -right-2 -top-2 min-w-[16px] rounded-full bg-indigo-500 px-1.5 py-0.5 text-[9px] font-semibold leading-none text-white">
+                  <span className="absolute -right-2 -top-2 min-w-[16px] rounded-full bg-slate-900 px-1.5 py-0.5 text-[9px] font-semibold leading-none text-white">
                     {badge}
                   </span>
                 ) : null}
               </button>
 
-              <div className="pointer-events-none absolute left-[54px] top-1/2 z-20 hidden -translate-y-1/2 whitespace-nowrap rounded-lg border border-slate-700 bg-slate-900/95 px-2.5 py-1.5 text-[11px] font-medium text-white shadow-[0_10px_24px_rgba(15,23,42,0.24)] group-hover:block">
+              <div className="pointer-events-none absolute left-[58px] top-1/2 z-20 hidden -translate-y-1/2 whitespace-nowrap rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1.5 text-[11px] font-medium text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.12)] group-hover:block">
                 {item.label}
               </div>
             </div>
@@ -108,7 +108,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={onOpenHelp}
-          className="flex h-11 w-11 items-center justify-center rounded-xl text-[#9ca3af] transition hover:bg-[#1f2937] hover:text-white"
+          className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white/90 hover:text-slate-800"
           title="帮助"
         >
           <HelpCircle className="h-[18px] w-[18px]" />
@@ -116,10 +116,10 @@ export function Sidebar({
         <button
           type="button"
           onClick={onOpenProfile}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-sm font-semibold text-white transition hover:bg-white/[0.12]"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:border-sky-200 hover:text-slate-950"
           title="工作区信息"
         >
-          SP
+          工
         </button>
       </div>
     </aside>

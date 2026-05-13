@@ -267,15 +267,15 @@ export function RightTaskPanel({
 
   if (!isOpen) {
     return (
-      <aside className="flex h-full w-[68px] shrink-0 flex-col items-center justify-between border-l border-[#e5e7eb] bg-white px-3 py-5">
+      <aside className="flex h-full w-[72px] shrink-0 flex-col items-center justify-between border-l border-[#dfe6f2] bg-[linear-gradient(180deg,#fbfcff_0%,#f5f8fc_100%)] px-3 py-5">
         <button
           type="button"
           onClick={onOpen}
-          className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+          className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-semibold text-slate-700 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
         >
           打开
         </button>
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2 py-3 text-center text-[11px] font-medium text-slate-500">
+        <div className="rounded-2xl border border-slate-200 bg-white px-2 py-3 text-center text-[11px] font-medium text-slate-500 shadow-[0_8px_18px_rgba(15,23,42,0.04)]">
           {todayTasks.length}
           <div className="mt-1">今日</div>
         </div>
@@ -284,11 +284,12 @@ export function RightTaskPanel({
   }
 
   return (
-    <aside className="flex h-full w-[340px] shrink-0 flex-col border-l border-[#e5e7eb] bg-white">
+    <aside className="flex h-full w-[352px] shrink-0 flex-col border-l border-[#dfe6f2] bg-[linear-gradient(180deg,#fbfcff_0%,#f8fafc_100%)]">
       <div className="planner-side-scroll flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-5 pr-4">
-        <section className="flex items-center justify-between rounded-2xl border border-[#e8ebf3] bg-slate-50 px-4 py-3 shadow-soft">
+        <section className="flex items-center justify-between rounded-[24px] border border-[#dfe6f2] bg-[linear-gradient(135deg,#ffffff_0%,#f2f7ff_100%)] px-4 py-3 shadow-[0_16px_36px_rgba(15,23,42,0.06)]">
           <div>
-            <div className="text-[12px] font-semibold text-slate-900">{focusedDayLabel}</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">当前聚焦日</div>
+            <div className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-slate-950">{focusedDayLabel}</div>
             <div className="mt-1 text-[12px] text-slate-500">
               {activeSection === "Planner" ? "动态重排工作台" : `${sectionLabels[activeSection]} 已联动到 AI 面板`}
             </div>
@@ -296,13 +297,13 @@ export function RightTaskPanel({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-sky-200 hover:text-slate-900"
           >
             <PanelRightClose className="h-4 w-4" />
           </button>
         </section>
 
-        <section className="rounded-2xl border border-[#e8ebf3] bg-white p-1 shadow-soft">
+        <section className="rounded-2xl border border-[#dfe6f2] bg-white/90 p-1 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
           <div className="grid grid-cols-3 gap-1">
             {[
               { key: "plan", label: "计划" },
@@ -314,7 +315,7 @@ export function RightTaskPanel({
                 type="button"
                 onClick={() => setPanelView(item.key as PanelView)}
                 className={`rounded-xl px-3 py-2 text-[12px] font-medium transition ${
-                  panelView === item.key ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  panelView === item.key ? "bg-slate-900 text-white shadow-[0_8px_18px_rgba(15,23,42,0.14)]" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
                 {item.label}
@@ -587,21 +588,21 @@ export function RightTaskPanel({
               <div className="text-[14px] font-semibold text-slate-950">历史效率分析</div>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                  <div className="text-[11px] text-slate-500">Estimated vs actual</div>
+                  <div className="text-[11px] text-slate-500">预估与实际</div>
                   <div className="mt-1 text-[15px] font-semibold text-slate-950">
                     {Math.max(allTasks.reduce((sum, task) => sum + task.estimatedMinutes, 0) - completedEvents.length * 30, 0)} / {allTasks.reduce((sum, task) => sum + task.estimatedMinutes, 0)}m
                   </div>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                  <div className="text-[11px] text-slate-500">Focus score</div>
+                  <div className="text-[11px] text-slate-500">专注评分</div>
                   <div className="mt-1 text-[15px] font-semibold text-slate-950">{focusScore}</div>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                  <div className="text-[11px] text-slate-500">Interruption count</div>
+                  <div className="text-[11px] text-slate-500">中断次数</div>
                   <div className="mt-1 text-[15px] font-semibold text-slate-950">{interruptionCount}</div>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                  <div className="text-[11px] text-slate-500">Best focus window</div>
+                  <div className="text-[11px] text-slate-500">最佳专注窗口</div>
                   <div className="mt-1 text-[15px] font-semibold text-slate-950">09:00 - 10:30</div>
                 </div>
               </div>
@@ -631,17 +632,17 @@ export function RightTaskPanel({
                 {[
                   {
                     key: "balanced" as const,
-                    title: "Balanced Plan",
+                    title: "平衡方案",
                     description: "兼顾会议、专注和截止日期。"
                   },
                   {
                     key: "deep" as const,
-                    title: "Deep Work Plan",
+                    title: "深度工作方案",
                     description: "优先保护长专注块。"
                   },
                   {
                     key: "deadline" as const,
-                    title: "Deadline First Plan",
+                    title: "截止优先方案",
                     description: "优先把 P1 / P2 任务往前推。"
                   }
                 ].map((scenario) => (
@@ -650,10 +651,10 @@ export function RightTaskPanel({
                     <div className="mt-1 text-[11px] leading-5 text-slate-500">{scenario.description}</div>
                     <div className="mt-3 flex gap-2">
                       <button type="button" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700" onClick={() => onPreviewScenario(scenario.key)}>
-                        Preview
+                        预览
                       </button>
                       <button type="button" className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[11px] font-medium text-indigo-700" onClick={() => onApplyScenario(scenario.key)}>
-                        Apply
+                        应用
                       </button>
                     </div>
                   </div>

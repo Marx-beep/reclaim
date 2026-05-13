@@ -37,45 +37,45 @@ interface CalendarEventBlockProps {
 
 const eventStyles = {
   focus: {
-    background: "#def7e8",
-    border: "#86efac",
-    text: "#166534",
-    strip: "#22c55e",
+    background: "#e5f7f2",
+    border: "#93ddcd",
+    text: "#0f766e",
+    strip: "#14b8a6",
     Icon: Sparkles
   },
   task: {
-    background: "#e4efff",
-    border: "#93c5fd",
-    text: "#1e40af",
+    background: "#eaf1ff",
+    border: "#b7ccff",
+    text: "#1d4ed8",
     strip: "#3b82f6",
     Icon: CheckSquare
   },
   meeting: {
-    background: "#fff4d6",
-    border: "#fcd34d",
-    text: "#92400e",
+    background: "#fff5df",
+    border: "#f6d089",
+    text: "#9a6700",
     strip: "#f59e0b",
     Icon: Users
   },
   habit: {
-    background: "#fdeaf3",
-    border: "#f9a8d4",
-    text: "#9d174d",
-    strip: "#ec4899",
+    background: "#f1f5f9",
+    border: "#cbd5e1",
+    text: "#475569",
+    strip: "#94a3b8",
     Icon: Repeat
   },
   break: {
-    background: "#fff1f5",
-    border: "#f5b5cf",
-    text: "#be185d",
-    strip: "#ec4899",
+    background: "#fff6ea",
+    border: "#f7d7a8",
+    text: "#b45309",
+    strip: "#fb923c",
     Icon: Coffee
   },
   buffer: {
-    background: "#eef2ff",
-    border: "#c7d2fe",
-    text: "#4338ca",
-    strip: "#6366f1",
+    background: "#eef4ff",
+    border: "#c7d7fe",
+    text: "#334155",
+    strip: "#64748b",
     Icon: Clock3
   }
 } as const;
@@ -176,18 +176,18 @@ export function CalendarEventBlock({
           onClick();
         }
       }}
-      className={`group relative overflow-hidden rounded-[10px] border px-2 py-1.5 text-left text-[11px] shadow-[0_1px_1px_rgba(15,23,42,0.08)] transition ${
-        isDragging ? "cursor-grabbing opacity-50 shadow-[0_10px_24px_rgba(15,23,42,0.14)]" : "hover:-translate-y-[1px] hover:shadow-[0_6px_16px_rgba(15,23,42,0.10)]"
+      className={`group relative overflow-hidden rounded-[14px] border px-2.5 py-2 text-left text-[11px] shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition ${
+        isDragging ? "cursor-grabbing opacity-50 shadow-[0_12px_28px_rgba(15,23,42,0.16)]" : "hover:-translate-y-[1px] hover:shadow-[0_12px_26px_rgba(15,23,42,0.10)]"
       } ${isOptimizing && event.flexible ? "animate-[pulse_1.2s_ease-in-out_infinite]" : ""} ${
         isDone ? "opacity-75" : isUnscheduled ? "opacity-55" : isMuted ? "opacity-35 saturate-[0.75]" : "opacity-100"
       } ${isLocked ? "cursor-not-allowed" : "cursor-grab"} ${event.flexible && !isLocked ? "border-dashed" : ""} ${
         changeType ? `${changeToneClasses[changeType]} animate-[pulse_1.4s_ease-in-out_2]` : ""
-      } ${isAiAdjusted && !isDone && !isUnscheduled ? "shadow-[0_10px_24px_rgba(249,115,22,0.14)]" : ""} select-none touch-none ${className}`}
+      } ${isAiAdjusted && !isDone && !isUnscheduled ? "shadow-[0_14px_30px_rgba(37,99,235,0.14)]" : ""} backdrop-blur-[1px] select-none touch-none ${className}`}
       style={{ ...surfaceStyle, ...style }}
       {...(isLocked ? {} : dragAttributes)}
       {...(isLocked ? {} : dragListeners)}
     >
-      <span className="absolute inset-y-0 left-0 w-1 rounded-l-[10px]" style={{ backgroundColor: meta.strip }} />
+      <span className="absolute inset-y-0 left-0 w-1.5 rounded-l-[14px]" style={{ backgroundColor: meta.strip }} />
 
       <div className="pl-1.5">
         <div className="flex items-start justify-between gap-2">
@@ -256,7 +256,7 @@ export function CalendarEventBlock({
             </div>
             {statusBadge ? <div className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-medium ${statusBadgeTone}`}>{statusBadge}</div> : null}
             {isAiAdjusted ? (
-              <div className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-semibold text-amber-700">
+              <div className="inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-[9px] font-semibold text-sky-700">
                 AI 重排
               </div>
             ) : null}

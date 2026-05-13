@@ -278,8 +278,8 @@ function DayColumn({
         onEmptySlotSelect(dayIndex, nextHour);
       }}
       className={`relative border-l border-[#edf0f5] ${
-        dayIndex === 0 || dayIndex === 6 ? "bg-[#fbfbfd]" : "bg-white"
-      } ${isOver ? "bg-indigo-50/40" : ""} ${isFocusedDay ? "ring-1 ring-inset ring-indigo-200" : ""}`}
+        dayIndex === 0 || dayIndex === 6 ? "bg-[#f7f8fb]" : "bg-white"
+      } ${isOver ? "bg-sky-50/45" : ""} ${isFocusedDay ? "ring-1 ring-inset ring-sky-200" : ""}`}
       style={{ height: TOTAL_HEIGHT }}
     >
       {HOURS.map((hour) => (
@@ -299,25 +299,25 @@ function DayColumn({
 
       {selectedSlot && selectedSlot.day === dayIndex ? (
         <div
-          className="pointer-events-none absolute left-1 right-1 z-[5] rounded-xl border border-indigo-300 bg-indigo-100/75 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+          className="pointer-events-none absolute left-1 right-1 z-[5] rounded-xl border border-sky-300 bg-sky-100/80 shadow-[0_8px_18px_rgba(56,189,248,0.10)]"
           style={{
             top: getHourTop(selectedSlot.startHour) + 4,
             height: HOUR_HEIGHT - 8
           }}
         >
-          <div className="px-3 py-2 text-[11px] font-medium text-indigo-700">已选时间段</div>
+          <div className="px-3 py-2 text-[11px] font-medium text-sky-700">已选时间段</div>
         </div>
       ) : null}
 
       {previewSlot && previewSlot.day === dayIndex ? (
         <div
-          className="pointer-events-none absolute left-1 right-1 z-[6] rounded-xl border border-dashed border-indigo-400 bg-indigo-100/55"
+          className="pointer-events-none absolute left-1 right-1 z-[6] rounded-xl border border-dashed border-sky-400 bg-sky-100/60"
           style={{
             top: getHourTop(previewSlot.startHour) + 4,
             height: previewSlot.duration * HOUR_HEIGHT - 8
           }}
         >
-          <div className="px-3 py-2 text-[11px] font-medium text-indigo-700">
+          <div className="px-3 py-2 text-[11px] font-medium text-sky-700">
             {previewSlot.mode === "resize" ? "松手后调整时长" : "松手后移动到这里"}
           </div>
         </div>
@@ -340,7 +340,7 @@ function DayColumn({
         />
       ))}
 
-      {isToday ? <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500/0 via-indigo-500/35 to-indigo-500/0" /> : null}
+      {isToday ? <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-500/0 via-sky-500/40 to-sky-500/0" /> : null}
     </div>
   );
 }
@@ -508,9 +508,9 @@ export function CalendarGrid({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-[#e5e7eb] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-[#dfe6f2] bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] shadow-[0_20px_48px_rgba(15,23,42,0.07)]">
       <div className={`grid border-b border-[#edf0f5]`} style={{ gridTemplateColumns: `${TIME_COLUMN_WIDTH}px repeat(7, minmax(0, 1fr))` }}>
-        <div className="flex h-[92px] flex-col justify-end border-r border-[#edf0f5] bg-[#f8fafc] px-3 pb-3">
+        <div className="flex h-[92px] flex-col justify-end border-r border-[#edf0f5] bg-[linear-gradient(180deg,#f8fbff_0%,#f2f6fb_100%)] px-3 pb-3">
           <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">GMT+8</span>
           <span className="mt-1 text-[11px] text-slate-500">全天时间轴</span>
         </div>
@@ -523,21 +523,21 @@ export function CalendarGrid({
               type="button"
               onClick={() => onFocusedDayChange(day.index)}
               className={`flex h-[92px] flex-col items-start justify-end border-l border-[#edf0f5] px-4 pb-3 text-left ${
-                day.index === 0 || day.index === 6 ? "bg-[#fafafa]" : "bg-white"
-              } ${focusedDayIndex === day.index ? "bg-indigo-50/60" : "hover:bg-slate-50"}`}
+                day.index === 0 || day.index === 6 ? "bg-[#f7f8fb]" : "bg-white/85"
+              } ${focusedDayIndex === day.index ? "bg-sky-50/70" : "hover:bg-slate-50/90"}`}
             >
               <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">{day.dayLabel}</div>
               <div className="mt-1 flex items-center gap-2">
-                <span className={`text-[30px] font-semibold leading-none tracking-[-0.03em] ${isToday ? "text-[#4f46e5]" : "text-slate-900"}`}>
+                <span className={`text-[30px] font-semibold leading-none tracking-[-0.03em] ${isToday ? "text-sky-700" : "text-slate-900"}`}>
                   {day.dateLabel}
                 </span>
                 {isToday ? (
-                  <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-[10px] font-semibold text-[#4f46e5]">今天</span>
+                  <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-700">今天</span>
                 ) : null}
               </div>
               <div className="mt-2 flex w-full items-center gap-2">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full rounded-full bg-indigo-500 transition-[width]" style={{ width: `${Math.min((load / 10) * 100, 100)}%` }} />
+                  <div className="h-full rounded-full bg-sky-600 transition-[width]" style={{ width: `${Math.min((load / 10) * 100, 100)}%` }} />
                 </div>
                 <span className="text-[10px] font-medium text-slate-400">{load.toFixed(load % 1 === 0 ? 0 : 1)}h</span>
               </div>
@@ -548,7 +548,7 @@ export function CalendarGrid({
 
       <div
         ref={scrollShellRef}
-        className="planner-scroll-shell min-h-0 flex-1 overflow-y-auto overflow-x-auto overscroll-contain bg-[#fcfdff] pr-3 pb-2"
+        className="planner-scroll-shell min-h-0 flex-1 overflow-y-auto overflow-x-auto overscroll-contain bg-[linear-gradient(180deg,#fcfdff_0%,#f7faff_100%)] pr-3 pb-2"
       >
         <DndContext
           sensors={sensors}
@@ -558,7 +558,7 @@ export function CalendarGrid({
           onDragEnd={handleDragEnd}
         >
           <div className="grid min-h-0" style={{ gridTemplateColumns: `${TIME_COLUMN_WIDTH}px repeat(7, minmax(0, 1fr))` }}>
-            <div className="relative border-r border-[#edf0f5] bg-[#f8fafc]" style={{ height: TOTAL_HEIGHT }}>
+            <div className="relative border-r border-[#edf0f5] bg-[linear-gradient(180deg,#f8fbff_0%,#f3f6fb_100%)]" style={{ height: TOTAL_HEIGHT }}>
               {HOURS.map((hour) => (
                 <div
                   key={hour}
