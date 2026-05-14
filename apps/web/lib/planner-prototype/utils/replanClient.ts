@@ -463,18 +463,31 @@ function applyAction(events: CalendarEvent[], tasks: TaskItem[], action: ReplanA
         return;
       }
 
+      const originalMid = target.startHour + target.duration / 2;
       const workedHours = Math.max(0.5, Math.min(target.duration * 0.5, 0.75));
       const remaining = Number(Math.max(0.5, target.duration - workedHours - 0.75).toFixed(2));
-      const workedEnd = snapToQuarterHour(target.startHour + workedHours);
+      const breakDuration = 0.25;
+      const lighterDuration = 0.5;
+      const resumeDuration = 0.25;
+
       target.duration = workedHours;
       target.status = "completed";
 
+      const prefs = (settings.lowLoadTaskPreference || "").split(",").map((s) => s.trim()).filter(Boolean);
+      const existingBreakCount = events.filter(
+        (e) => e.day === target!.day && e.type === "break" && e.aiGenerated
+      ).length;
+      const prefIndex = existingBreakCount % Math.max(prefs.length, 1);
+      const prefTitle = prefs.length > 0 ? prefs[prefIndex] : "休息 / 缓冲";
+
+      const totalSpan = breakDuration + lighterDuration + resumeDuration;
+      const breakStart = snapToQuarterHour(originalMid - totalSpan / 2);
       events.push({
         id: generateId("break"),
-        title: "休息 / 缓冲",
+        title: prefTitle,
         day: target.day,
-        startHour: workedEnd,
-        duration: 0.25,
+        startHour: breakStart,
+        duration: breakDuration,
         type: "break",
         priority: "P4",
         status: "scheduled",
@@ -486,42 +499,46 @@ function applyAction(events: CalendarEvent[], tasks: TaskItem[], action: ReplanA
       });
 
       const lighterTask = chooseLowEnergyTask(tasks);
+      const lighterStart = snapToQuarterHour(breakStart + breakDuration);
       if (lighterTask) {
         events.push({
-          ...createEventFromTask(lighterTask, target.day, workedEnd + 0.25, 0.5, false),
-          aiGenerated: true
+          ...createEventFromTask(lighterTask, target.day, lighterStart, lighterDuration, false),
+          aiGenerated: true,
+          fixed: true,
+          movable: false
         });
       } else {
         events.push({
           id: generateId("light"),
           title: "轻量任务：整理参考资料",
           day: target.day,
-          startHour: workedEnd + 0.25,
-          duration: 0.5,
+          startHour: lighterStart,
+          duration: lighterDuration,
           type: "habit",
           priority: "P4",
           status: "scheduled",
-          movable: true,
-          fixed: false,
-          flexible: true,
+          movable: false,
+          fixed: true,
+          flexible: false,
           energyLevel: "low",
           aiGenerated: true
         });
       }
 
+      const resumeStart = snapToQuarterHour(lighterStart + lighterDuration);
       events.push({
         ...target,
         id: generateId("resume"),
         title: `${target.title}（继续）`,
-        startHour: workedEnd + 0.75,
+        startHour: resumeStart,
         duration: remaining,
         status: "interrupted",
         aiGenerated: true,
-        movable: true,
-        fixed: false,
-        flexible: true
+        movable: false,
+        fixed: true,
+        flexible: false
       });
-      action.startHour = workedEnd;
+      action.startHour = snapToQuarterHour(target.startHour + workedHours);
       break;
     }
 

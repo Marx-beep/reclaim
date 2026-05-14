@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,6 +7,8 @@ import { SmartSuggestionsPanel } from "@/components/dashboard/smart-suggestions"
 import { EventDetailDrawer } from "@/components/dashboard/event-detail-drawer";
 import { QuickCreatePanel } from "@/components/dashboard/quick-create";
 import { ScheduleImportPanel } from "@/components/dashboard/schedule-import-panel";
+import { Card, CardContent } from "@/components/shared/card";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { apiFetch } from "@/lib/api/client";
 import { CATEGORY_TAG_OPTIONS, normalizeCategoryTag, normalizeCustomTags, type CategoryTag } from "@/lib/tags/time-categories";
 
@@ -66,6 +68,11 @@ export default function CalendarWorkspacePage() {
 
   const selectableTasks = useMemo(
     () => (tasksQuery.data ?? []).filter((item) => !["DONE", "CANCELLED"].includes(item.smartEvent.status)),
+    [tasksQuery.data]
+  );
+
+  const unscheduledCount = useMemo(
+    () => (tasksQuery.data ?? []).filter((item) => item.smartEvent.status === "DRAFT").length,
     [tasksQuery.data]
   );
 
@@ -155,17 +162,27 @@ export default function CalendarWorkspacePage() {
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[1680px] space-y-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-900">日历工作台</h2>
-          <p className="mt-1 text-sm text-slate-600">在日历里拖拽选择时间段，可直接弹窗选择任务并添加标签。</p>
-          {schedulerFeedback ? <div className="mt-2 text-xs text-emerald-700">{schedulerFeedback}</div> : null}
-        </div>
+      <div className="space-y-4">
+        <PageHeader
+          title="日历工作台"
+          description="在日历里拖拽选择时间段，可直接弹窗选择任务并添加标签。"
+          badges={
+            unscheduledCount > 0 ? (
+              <span className="rounded-full bg-[var(--color-event-meeting-light)] px-2 py-0.5 text-xs font-medium text-[#8B6830]">
+                {unscheduledCount} 个待安排
+              </span>
+            ) : undefined
+          }
+        />
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        {schedulerFeedback ? (
+          <div className="rounded-lg bg-[var(--color-event-focus-light)] px-3 py-2 text-sm text-[#3D7A56]">{schedulerFeedback}</div>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <Card padding="sm">
             <CalendarBoard events={events} onSelectEvent={setSelectedEvent} onSelectTimeRange={setSelectedRange} />
-          </div>
+          </Card>
 
           <div className="space-y-3 xl:sticky xl:top-4 xl:self-start">
             <SmartSuggestionsPanel />
@@ -176,18 +193,18 @@ export default function CalendarWorkspacePage() {
       </div>
 
       {schedulerOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-4 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-4 shadow-[var(--shadow-modal)]">
             <div className="mb-3">
-              <h3 className="text-base font-semibold text-slate-900">选择任务并安排时间</h3>
-              <p className="text-xs text-slate-600">选定任务后会自动更新到该时间段，并写入标签。</p>
+              <h3 className="text-base font-semibold">选择任务并安排时间</h3>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">选定任务后会自动更新到该时间段，并写入标签。</p>
             </div>
 
             <form onSubmit={submitSchedule} className="space-y-3">
-              <label className="block text-xs text-slate-600">
+              <label className="block text-xs text-[var(--color-text-secondary)]">
                 任务
                 <select
-                  className="mt-1 h-10 w-full rounded-md border border-slate-300 px-2 text-sm"
+                  className="mt-1 h-10 w-full rounded-lg border border-[var(--color-border-default)] bg-white px-2 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[rgba(111,109,184,0.2)]"
                   value={selectedTaskId}
                   disabled={selectableTasks.length === 0}
                   onChange={(event) => setSelectedTaskId(event.target.value)}
@@ -202,30 +219,30 @@ export default function CalendarWorkspacePage() {
               </label>
 
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <label className="block text-xs text-slate-600">
+                <label className="block text-xs text-[var(--color-text-secondary)]">
                   开始
                   <input
                     type="datetime-local"
-                    className="mt-1 h-10 w-full rounded-md border border-slate-300 px-2 text-sm"
+                    className="mt-1 h-10 w-full rounded-lg border border-[var(--color-border-default)] bg-white px-2 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[rgba(111,109,184,0.2)]"
                     value={slotStart}
                     onChange={(event) => setSlotStart(event.target.value)}
                   />
                 </label>
-                <label className="block text-xs text-slate-600">
+                <label className="block text-xs text-[var(--color-text-secondary)]">
                   结束
                   <input
                     type="datetime-local"
-                    className="mt-1 h-10 w-full rounded-md border border-slate-300 px-2 text-sm"
+                    className="mt-1 h-10 w-full rounded-lg border border-[var(--color-border-default)] bg-white px-2 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[rgba(111,109,184,0.2)]"
                     value={slotEnd}
                     onChange={(event) => setSlotEnd(event.target.value)}
                   />
                 </label>
               </div>
 
-              <label className="block text-xs text-slate-600">
+              <label className="block text-xs text-[var(--color-text-secondary)]">
                 类别标签
                 <select
-                  className="mt-1 h-10 w-full rounded-md border border-slate-300 px-2 text-sm"
+                  className="mt-1 h-10 w-full rounded-lg border border-[var(--color-border-default)] bg-white px-2 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[rgba(111,109,184,0.2)]"
                   value={categoryTag}
                   onChange={(event) => setCategoryTag(event.target.value as CategoryTag)}
                 >
@@ -237,11 +254,11 @@ export default function CalendarWorkspacePage() {
                 </select>
               </label>
 
-              <label className="block text-xs text-slate-600">
+              <label className="block text-xs text-[var(--color-text-secondary)]">
                 个性化标签（逗号分隔）
                 <input
                   type="text"
-                  className="mt-1 h-10 w-full rounded-md border border-slate-300 px-2 text-sm"
+                  className="mt-1 h-10 w-full rounded-lg border border-[var(--color-border-default)] bg-white px-2 text-sm placeholder:text-[var(--color-text-placeholder)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[rgba(111,109,184,0.2)]"
                   placeholder="例如：深度工作, 客户交付"
                   value={customTagInput}
                   onChange={(event) => setCustomTagInput(event.target.value)}
@@ -251,14 +268,14 @@ export default function CalendarWorkspacePage() {
               <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  className="h-10 rounded-md border border-slate-300 px-4 text-sm text-slate-700"
+                  className="h-10 rounded-lg border border-[var(--color-border-default)] px-4 text-sm text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-page-subtle)]"
                   onClick={() => setSchedulerOpen(false)}
                 >
                   取消
                 </button>
                 <button
                   type="submit"
-                  className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-white"
+                  className="h-10 rounded-lg bg-[var(--color-btn-primary)] px-4 text-sm font-medium text-white transition-colors hover:bg-[var(--color-btn-primary-hover)]"
                   disabled={scheduleTask.isPending || selectableTasks.length === 0}
                 >
                   {scheduleTask.isPending ? "安排中..." : "确认安排"}

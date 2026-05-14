@@ -4,6 +4,7 @@ import { addDays, startOfWeek } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarGrid } from "./components/CalendarGrid";
 import { EventDetailModal } from "./components/EventDetailModal";
+import { FilterEmptyState } from "./components/FilterEmptyState";
 import { InfoModal } from "./components/InfoModal";
 import {
   AnalyticsView,
@@ -57,10 +58,12 @@ import {
   findTaskByEvent,
   formatHours,
   formatTime,
+  formatWeekRange,
   generateId,
   sortEventsForDisplay
 } from "./utils/calendarUtils";
 import { requestScheduleReplan } from "./utils/replanClient";
+import { usePlannerFilters } from "./hooks/usePlannerFilters";
 
 interface ToastState {
   id: number;
@@ -68,7 +71,7 @@ interface ToastState {
 }
 
 const sectionLabels: Record<NavigationSection, string> = {
-  Planner: "日历工作台",
+  Planner: "日程规划",
   Tasks: "任务",
   Habits: "习惯",
   Focus: "专注时间",
@@ -94,7 +97,7 @@ function buildContextualSuggestions(
     suggestions.push({
       id: `focus-slot-${firstFlexible.id}`,
       title: "把高价值任务放进整块时间",
-      description: `“${firstFlexible.title}”更适合放进完整的专注窗口，减少碎片化切换。`,
+      description: `“${firstFlexible.title}”更适合放进整块时间，减少碎片化切换。`,
       action: { kind: "focus_slot", day: focusedDayIndex, startHour: 14 }
     });
   }
@@ -104,7 +107,7 @@ function buildContextualSuggestions(
     suggestions.push({
       id: `buffer-day-${focusedDayIndex}`,
       title: "会议后补一段缓冲",
-      description: "今天的会议密度偏高，建议插入 15 分钟恢复块，避免后续专注任务直接撞上会议疲劳。",
+      description: "今天的会议密度偏高，建议插入15分钟恢复块，避免后续专注任务直接撞上会议疲劳。",
       action: { kind: "insert_buffer", day: focusedDayIndex, startHour: 15.25 }
     });
   }
@@ -112,8 +115,8 @@ function buildContextualSuggestions(
   if (selectedEvent && selectedEvent.flexible && selectedEvent.status !== "completed") {
     suggestions.push({
       id: `selected-${selectedEvent.id}`,
-      title: "围绕当前事件做重排",
-      description: `你刚才选中了“${selectedEvent.title}”。现在可以拖动、压缩、延长，或点“干不下去了”触发自适应重排。`,
+      title: "围绕当前事项重排",
+      description: `选中了“${selectedEvent.title}”。现在可以拖动、压缩、延长，或点“干不下去了”触发自适应重排。`,
       action: { kind: "rebalance", targetEventId: selectedEvent.id }
     });
   }
@@ -145,27 +148,38 @@ export default function App() {
   const [requestedPanelView, setRequestedPanelView] = useState<"plan" | "details" | "ai" | null>(null);
   const [requestedPanelViewToken, setRequestedPanelViewToken] = useState(0);
   const [selectedSlot, setSelectedSlot] = useState<{ day: number; startHour: number } | null>(null);
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(2026, 4, 11), { weekStartsOn: 0 }));
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [focusedDayIndex, setFocusedDayIndex] = useState(TODAY_INDEX);
   const [helpOpen, setHelpOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
+  const {
+    filterState,
+    isFilterOpen,
+    setIsFilterOpen,
+    toggleFilter,
+    clearFilters,
+    filteredEvents,
+    filteredTasks
+  } = usePlannerFilters();
+
   const dayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
+  const displayEvents = filteredEvents(events);
+  const displayTasks = filteredTasks(tasks);
+
   const selectedEvent = useMemo(
-    () => (selectedEventId ? events.find((event) => event.id === selectedEventId) ?? null : null),
-    [events, selectedEventId]
+    () => (selectedEventId ? displayEvents.find((event) => event.id === selectedEventId) ?? null : null),
+    [displayEvents, selectedEventId]
   );
   const linkedTask = useMemo(() => findTaskByEvent(tasks, selectedEvent), [selectedEvent, tasks]);
   const focusedDayTasks = useMemo(
     () =>
-      events.filter(
+      displayEvents.filter(
         (event) =>
-          event.day === focusedDayIndex &&
-          ["task", "focus", "habit"].includes(event.type) &&
-          event.status !== "unscheduled"
+          event.day === focusedDayIndex
       ),
-    [events, focusedDayIndex]
+    [displayEvents, focusedDayIndex]
   );
   const focusedDayLabel = dayNames[focusedDayIndex] ?? "本日";
   const focusHours = useMemo(
@@ -198,21 +212,21 @@ export default function App() {
 
     return [
       {
-        label: "当前聚焦日",
+        label: "当前聚焦",
         value: focusedDayLabel,
-        detail: "右侧 AI 面板和推荐空档都会围绕这一天给出重排解释。",
+        detail: "推荐空档和智能建议都围绕这一天展开",
         tone: "indigo"
       },
       {
         label: "专注时长",
         value: formatHours(focusHours),
-        detail: `本周已保护 ${focusPlan.protectedEventIds.length} 个专注块，目标是 ${focusPlan.weeklyTargetHours} 小时。`,
+        detail: `已保护 ${focusPlan.protectedEventIds.length} 个专注块，目标 ${focusPlan.weeklyTargetHours}h`,
         tone: "emerald"
       },
       {
-        label: "会议压力",
-        value: `${meetingHours.toFixed(meetingHours % 1 === 0 ? 0 : 1)} 小时`,
-        detail: `当前仍有 ${flexibleCount} 个灵活时间块会参与自动重排。`,
+        label: "会议占用",
+        value: `${meetingHours.toFixed(meetingHours % 1 === 0 ? 0 : 1)}h`,
+        detail: `${flexibleCount} 个灵活事项参与自动安排`,
         tone: "amber"
       }
     ];
@@ -275,7 +289,7 @@ export default function App() {
           event.day === sourceEvent.day &&
           event.id !== sourceEvent.id &&
           event.title !== resumeTitle &&
-          event.title !== "休息 / 缓冲" &&
+          event.type !== "break" &&
           (!breakBlock || event.startHour >= breakBlock.startHour + breakBlock.duration) &&
           (!resumeBlock || event.startHour < resumeBlock.startHour)
       ) ?? null;
@@ -631,22 +645,117 @@ export default function App() {
     setDismissedSuggestionIds((current) => [...current, suggestion.id]);
   };
 
-  const handleAutoSchedule = () => {
+  const handleAutoSchedule = async () => {
     if (isOptimizing) {
       return;
     }
 
+    showToast("正在智能安排日程...");
     setIsOptimizing(true);
-    window.setTimeout(async () => {
-      await runReplan(
-        {
-          kind: "auto_schedule",
-          focusDay: focusedDayIndex
-        },
-        "本周日程已优化"
-      );
-      setIsOptimizing(false);
-    }, 600);
+
+    let aiSuccess = false;
+
+    try {
+      const response = await fetch("/api/scheduling/recompute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trigger: "MANUAL",
+          useLlmAdvisor: true,
+          instruction: "请重新优化整周日程安排，将高优先级任务前置，保证截止时间，避免冲突，并保留固定承诺。",
+          fallbackOnError: true,
+          windowStart: weekStart.toISOString(),
+          windowEnd: new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        })
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      const errorText = await response.text().catch(() => "");
+
+      if (!response.ok || !contentType.includes("application/json")) {
+        console.warn("⚠️ API 返回异常:", {
+          status: response.status,
+          contentType,
+          isHtml: errorText.includes("<!DOCTYPE"),
+          preview: errorText.slice(0, 300)
+        });
+        throw new Error(`API ${response.status}: ${contentType.includes("text/html") ? "服务端错误" : errorText.slice(0, 200)}`);
+      }
+
+      const data = JSON.parse(errorText);
+      console.log("✅ AI 智能安排成功:", data);
+
+      if (data.ok && data.result?.events && Array.isArray(data.result.events)) {
+        const mappedEvents = data.result.events.map((event: Record<string, unknown>) => ({
+          id: event.id as string,
+          title: event.title as string,
+          type: (event.type as CalendarEvent["type"]) || "task",
+          day: Math.max(0, Math.min(6, (event.day as number) ?? 0)),
+          startHour: Number(event.startHour) ?? 9,
+          duration: Number(event.duration) ?? 1,
+          priority: (event.priority as CalendarEvent["priority"]) || "P2",
+          status: ((event.status as string) === "completed" ? "completed" : "scheduled") as CalendarEvent["status"],
+          movable: !(event.fixed as boolean),
+          fixed: !!(event.fixed as boolean),
+          flexible: !(event.fixed as boolean),
+          energyLevel: (event.energyLevel as CalendarEvent["energyLevel"]) || "medium",
+          aiGenerated: true
+        }));
+
+        setEvents(mappedEvents);
+        showToast(`✅ AI 智能安排完成！已优化 ${mappedEvents.length} 个事件`);
+        aiSuccess = true;
+      } else {
+        console.warn("AI 返回格式异常:", data);
+      }
+    } catch (error) {
+      console.error("⚠️ AI 调用失败:", error instanceof Error ? error.message : error);
+    }
+
+    if (!aiSuccess) {
+      try {
+        showToast("🔄 使用智能算法优化日程...");
+        await runReplanLocal();
+      } catch (localError) {
+        console.error("❌ 本地算法也失败:", localError);
+        showToast("❌ 安排失败，请刷新页面重试");
+      }
+    }
+
+    setIsOptimizing(false);
+  };
+
+  const runReplanLocal = async () => {
+    return new Promise<void>((resolve, reject) => {
+      window.setTimeout(async () => {
+        try {
+          const result = await runReplan(
+            {
+              kind: "auto_schedule",
+              focusDay: focusedDayIndex
+            },
+            "✨ 日程优化完成"
+          );
+
+          console.log("📊 本地算法结果:", {
+            eventsCount: result.events.length,
+            changesCount: result.changes.length,
+            summary: result.summary
+          });
+
+          if (result.changes.length > 0) {
+            showToast(`✨ 已重新排列 ${result.changes.length} 个事件块`);
+          } else {
+            showToast("✨ 当前日程已是最优状态");
+          }
+
+          resolve();
+        } catch (err) {
+          console.error("❌ runReplan 执行失败:", err);
+          reject(err);
+        }
+      }, 400);
+    });
   };
 
   const handleDismissSuggestion = (suggestionId: string) => {
@@ -664,7 +773,7 @@ export default function App() {
     setFocusedDayIndex(TODAY_INDEX);
     setSelectedSlot(null);
     setIsPanelOpen(true);
-    setWeekStart(startOfWeek(new Date(2026, 4, 11), { weekStartsOn: 0 }));
+    setWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }));
     showToast("计划视图已重置");
   };
 
@@ -698,11 +807,11 @@ export default function App() {
     };
     setTasks((current) => [nextTask, ...current]);
     pushAiLog(
-      "创建任务对象",
-      `“${title}”已进入任务池，等待被自动安排进日历。`,
-      [`优先级：${input.priority}`, `截止：${dayNames[input.dueDay]} ${formatTime(input.dueHour)}`]
+      "添加任务",
+      `"${title}"已加入，会在截止前被安排进日程。`,
+      [`${input.priority} · ${dayNames[input.dueDay]} ${formatTime(input.dueHour)}截止`]
     );
-    showToast("任务已加入任务池");
+    showToast("任务已加入");
   };
 
   const handleScheduleTaskFromPool = (taskId: string) => {
@@ -781,12 +890,12 @@ export default function App() {
       })
     );
     pushAiLog(
-      "更新 Up Next",
+      "优先任务",
       nextUpNext
-        ? `“${currentTask.title}”已标记为 Up Next，下次重排会优先塞进最近空档。`
-        : `“${currentTask.title}”已取消 Up Next，会回到常规优先级排序。`
+        ? `"${currentTask.title}"已标记为优先，下次智能安排会优先放入空档。`
+        : `"${currentTask.title}"已取消优先，恢复常规排序。`
     );
-    showToast("Up Next 状态已更新");
+    showToast("优先状态已更新");
   };
 
   const handleChangeTaskPriority = (taskId: string, priority: EventPriority) => {
@@ -808,8 +917,8 @@ export default function App() {
     );
     setEvents(nextEvents);
     pushAiLog(
-      "调整任务优先级",
-      `“${taskTitle}”已改为 ${priority}。后续重排时，它会${priority === "P1" || priority === "P2" ? "前移到更完整的空档" : "让位给更高优先级对象"}。`
+      "调整优先级",
+      `"${taskTitle}"已改为 ${priority}。${priority === "P1" || priority === "P2" ? "会优先安排到更好的空档。" : "会让位给更高优先级事项。"}`
     );
     showToast("优先级已更新");
   };
@@ -817,7 +926,7 @@ export default function App() {
   const handleOpenTaskFromPool = (taskId: string) => {
     const linked = getLinkedScheduledEvent(taskId);
     if (!linked) {
-      showToast("这条任务还没落到日历里，先点“安排进日历”");
+      showToast("先点击安排将任务放到日历里");
       return;
     }
     setSelectedEventId(linked.id);
@@ -826,8 +935,8 @@ export default function App() {
 
   const handleCreateHabit = (habit: HabitItem) => {
     setHabits((current) => [habit, ...current]);
-    pushAiLog("创建习惯对象", `已新增习惯“${habit.name}”，后续可一键安排进本周空档。`);
-    showToast("习惯已创建");
+    pushAiLog("添加习惯", `"${habit.name}"已添加，后续可一键安排进本周日程`);
+    showToast("习惯已添加");
   };
 
   const handleToggleHabit = (habitId: string) => {
@@ -843,7 +952,7 @@ export default function App() {
         return { ...habit, active: !habit.active };
       })
     );
-    pushAiLog("切换习惯状态", nextState ? `“${habitName}”已重新启用，会继续参与自动排程。` : `“${habitName}”已暂停，不会再占用日历空档。`);
+    pushAiLog("切换习惯", nextState ? `"${habitName}"已启用，会参与自动安排` : `"${habitName}"已暂停，不再占用日程`);
     showToast("习惯状态已更新");
   };
 
@@ -898,21 +1007,21 @@ export default function App() {
     setEvents(sortEventsForDisplay(nextEvents));
     pushAiLog(
       "安排习惯",
-      "我把习惯优先放进了不影响高优先级任务的空档里，必要时会把它们浮动到其他时间。",
+      "习惯已安排到日程，会尽量不影响高优先级任务",
       habitChanges
     );
-    showToast("习惯已安排到日历");
+    showToast("习惯已安排");
   };
 
   const handleUpdateFocusTarget = (hours: number) => {
     setFocusPlan((current) => ({ ...current, weeklyTargetHours: hours }));
-    pushAiLog("更新专注目标", `每周专注目标已改为 ${hours} 小时，后续保护专注时间时会按这个目标补齐。`);
+    pushAiLog("更新专注目标", `每周目标已调整为 ${hours} 小时，后续保护专注时间时会按这个目标补齐。`);
   };
 
   const handleProtectFocus = () => {
     const needHours = Math.max(0, focusPlan.weeklyTargetHours - focusHours);
     if (needHours <= 0) {
-      pushAiLog("保护专注时间", "本周专注时间已经达到目标，暂时不需要再补新块。");
+      pushAiLog("保护专注时间", "本周专注目标已达成，无需额外添加");
       showToast("专注目标已达成");
       return;
     }
@@ -957,17 +1066,17 @@ export default function App() {
       meetingHours >= 8 ? ["会议正在压缩你的专注时间，建议减少低价值会议或把协作移到下午。"] : [];
     pushAiLog(
       "保护专注时间",
-      remaining > 0 ? "我先补上了一部分专注块，但会议密度较高，剩余目标需要继续腾空间。" : "我已经把专注时间补进本周空档，并尽量避开高优先级会议。",
+      remaining > 0 ? "我先补上了一部分专注块，但会议密度较高，剩余目标需要继续腾空间。" : "专注时间已补入日程，并尽量避开高优先级会议",
       protectedIds.map((id) => `新增专注块 ${id}`),
       warnings
     );
-    showToast("专注时间已加入日历");
+    showToast("专注时间已添加");
   };
 
   const handleCreateMeeting = (meeting: SmartMeetingItem) => {
     setMeetings((current) => [meeting, ...current]);
-    pushAiLog("创建会议对象", `已新增会议“${meeting.title}”，可以继续点击“重新寻找时间”把它落到日历。`);
-    showToast("会议对象已创建");
+    pushAiLog("添加会议", `已添加“${meeting.title}”，点击重新安排可放到“重新安排”日历里。`);
+    showToast("会议已添加");
   };
 
   const handleRescheduleMeeting = (meetingId: string) => {
@@ -986,8 +1095,8 @@ export default function App() {
         preferredHours: [10, 11, 14, 15.5]
       });
       if (slot === null) {
-        pushAiLog("会议重找时间", `“${meeting.title}”暂时找不到新的可用窗口，建议跳过本次或释放低优先级任务。`, [], ["当前没有合适空档。"]);
-        showToast("没有找到新的会议时间");
+        pushAiLog("会议重排", `“${meeting.title}”暂时没有合适的空档，建议跳过本次或释放低优先级任务。`, [], ["当前没有合适空档"]);
+        showToast("没有找到合适的会议时间");
         return;
       }
       void runReplan(
@@ -998,7 +1107,7 @@ export default function App() {
           startHour: slot,
           focusDay: linkedEvent.day
         },
-        `已为“${meeting.title}”重新寻找时间`
+        `已为“${meeting.title}”重新安排`
       );
       return;
     }
@@ -1010,7 +1119,7 @@ export default function App() {
       setMeetings((current) =>
         current.map((item) => (item.id === meetingId ? { ...item, conflictStatus: "冲突" } : item))
       );
-      pushAiLog("会议重找时间", `“${meeting.title}”与当前高优先级安排冲突，暂时无法落日历。`, [], ["会议与固定承诺冲突。"]);
+      pushAiLog("会议重排", `“${meeting.title}”与高优先级事项冲突，暂无法安排。`, [], ["会议与固定承诺冲突"]);
       showToast("会议暂时无法安排");
       return;
     }
@@ -1043,8 +1152,8 @@ export default function App() {
           : item
       )
     );
-    pushAiLog("安排会议", `我把“${meeting.title}”放进了一个不直接挤压 P1 任务的窗口。`, [`安排在 ${dayNames[meeting.scheduledDay]} ${formatTime(slot)}`]);
-    showToast("会议已加入日历");
+    pushAiLog("安排会议", `"“${meeting.title}”已放到日历，不影响高优先级任务。`, [`安排在 ${dayNames[meeting.scheduledDay]} ${formatTime(slot)}`]);
+    showToast("会议已添加");
   };
 
   const handleSkipMeeting = (meetingId: string) => {
@@ -1060,13 +1169,13 @@ export default function App() {
         item.id === meetingId ? { ...item, linkedEventId: undefined, conflictStatus: "待安排" } : item
       )
     );
-    pushAiLog("跳过会议", `“${meeting.title}”本次已跳过，空出来的窗口会重新回到可用时间池。`);
+    pushAiLog("跳过会议", `“${meeting.title}”已跳过，空出的时间会回到可用池。`);
     showToast("已跳过本次会议");
   };
 
   const handleCreateLink = (link: SchedulingLinkItem) => {
     setLinks((current) => [link, ...current]);
-    pushAiLog("创建预约链接", `已创建链接“${link.name}”，可继续预览可预约时间。`);
+    pushAiLog("添加链接", `已创建预约链接：“${link.name}”，可继续预览可预约时间。`);
     showToast("预约链接已创建");
   };
 
@@ -1090,28 +1199,28 @@ export default function App() {
       }
     }
     pushAiLog(
-      "预览预约链接",
-      `这些时间可用，因为它们只占用了低优先级任务，必要时可被更高优先级预约覆盖。`,
+      "预览链接",
+      `已生成可用时间，必要时会被更高优先级事项覆盖。`,
       previews.length > 0 ? previews : ["当前没有明显可预约窗口"]
     );
-    showToast("可预约时间已同步到 AI 面板");
+    showToast("可用时间已生成");
   };
 
   const handleCopyLink = (url: string) => {
-    pushAiLog("复制预约链接", `已复制链接 ${url}。你可以把它发给外部参与者。`);
+    pushAiLog("复制链接", `链接已复制，可发送给外部参与者 ${url}。你可以把它发给外部参与者。`);
     showToast("模拟复制成功");
   };
 
   const handleToggleConnection = (connectionId: string) => {
-    let summary = "日历连接状态已更新。";
+    let connectionName = "";
+    let nextStatus: "已同步" | "待授权" | "失败" = "已同步";
     setConnections((current) =>
       current.map((connection) => {
         if (connection.id !== connectionId) {
           return connection;
         }
-        const nextStatus =
-          connection.status === "待授权" ? "已同步" : connection.status === "已同步" ? "失败" : "已同步";
-        summary = nextStatus === "已同步" ? `“${connection.name}”已连接，忙碌时间会进入可用性判断。` : `“${connection.name}”当前不是健康同步状态。`;
+        connectionName = connection.name;
+        nextStatus = connection.status === "待授权" ? "已同步" : connection.status === "已同步" ? "失败" : "已同步";
         return {
           ...connection,
           status: nextStatus,
@@ -1119,7 +1228,7 @@ export default function App() {
         };
       })
     );
-    pushAiLog("切换同步状态", summary);
+    pushAiLog("日历同步", nextStatus === "已同步" ? (`"${connectionName}"已连接，忙碌时间会影响可用窗口判断`) : (`"${connectionName}"当前不是健康同步状态`));
     showToast("同步状态已更新");
   };
 
@@ -1135,10 +1244,10 @@ export default function App() {
       })
     );
     pushAiLog(
-      "手动同步日历",
-      `已同步“${connectionName}”。同步后的忙碌时间会影响任务、习惯和会议的可用窗口。`
+      "同步日历",
+      `已同步“${connectionName}”。忙碌时间会影响后续安排。`
     );
-    showToast("手动同步完成");
+    showToast("同步完成");
   };
 
   const handleChangeConnectionPrivacy = (
@@ -1155,32 +1264,32 @@ export default function App() {
         return { ...connection, privacy: value };
       })
     );
-    pushAiLog("更新隐私模式", `“${connectionName}”已切到“${value}”，外部可见性会随之改变。`);
+    pushAiLog("更新隐私", `“${connectionName}”已设为“${value}”，外部可见性已更新。`);
   };
 
   const handleExplainMetric = (metric: string) => {
     const map: Record<string, string> = {
       本周任务完成率: "完成率偏低通常意味着本周变动较多，动态重排承担了不少缓冲作用。",
-      专注时间总量: "专注时间不足通常说明会议或碎任务正在吞掉成块工作窗口。",
+      专注时间总量: "专注时间不足通常说明会议或碎任务正在蚕食成块的工作窗口。",
       会议时间总量: "会议时间偏高时，建议优先保护上午的深度工作时间。",
-      习惯完成率: "习惯完成率低，往往代表 routines 的优先级还不够高。",
-      被重排次数: "重排次数越高，越能说明你们这个产品演示出了动态规划的核心价值。",
-      干不下去了次数: "这个次数高，说明系统需要继续学习你的真实精力节奏。"
+      习惯完成率: "习惯完成率低，往往代表 固定习惯 的优先级还不够高。",
+      被重排次数: "重排次数越高，越能说明动态规划正在持续优化你的日程。",
+      干不下去了次数: "这个次数高，说明系统需要继续学习你的精力节奏。"
     };
     pushAiLog("分析指标说明", map[metric] ?? `已查看指标“${metric}”的解释。`);
-    showToast("分析解释已写入 AI 面板");
+    showToast("解释已写入助手面板");
   };
 
   const handleUpdateSettings = (patch: Partial<PlannerSettings>) => {
     setSettings((current) => ({ ...current, ...patch }));
     if (patch.replanMode) {
       pushAiLog(
-        "更新排程策略",
+        "更新策略",
         patch.replanMode === "conservative"
-          ? "保守模式会尽量少移动已有任务。"
+          ? "已切换为保守策略，会尽量少移动已有安排。"
           : patch.replanMode === "balanced"
-            ? "平衡模式会为了高优先级任务适度重排。"
-            : "激进模式会更频繁地移动低优先级任务来保护高优先级安排。"
+            ? "已切换为平衡策略，会适度调整低优先级事项。"
+            : "已切换为激进策略，会更灵活地重排日程。"
       );
     } else {
       pushAiLog("更新设置", "排程设置已修改，后续的自动重排会按新规则运行。");
@@ -1190,13 +1299,13 @@ export default function App() {
 
   const handlePreviewScenario = (scenario: "balanced" | "deep" | "deadline") => {
     const summaryMap = {
-      balanced: "Balanced Plan 会尽量保持现有结构，只做温和重排。",
-      deep: "Deep Work Plan 会优先保护上午和下午的长专注块。",
-      deadline: "Deadline First Plan 会把 P1 / P2 任务向前推，并压缩低优先级事项。"
+      balanced: "Balanced Plan 平衡方案会保持现有结构，只做温和调整。",
+      deep: "Deep Work Plan 深度方案会优先保护上午和下午的长专注块。",
+      deadline: "Deadline First Plan 截止方案会把高优先级任务往前推，并压缩低优先级事项。"
     };
-    pushAiLog("预览多方案模拟", summaryMap[scenario]);
+    pushAiLog("预览方案", summaryMap[scenario]);
     setIsPanelOpen(true);
-    showToast("方案预览已写入 AI 面板");
+    showToast("方案预览已生成");
   };
 
   const handleApplyScenario = (scenario: "balanced" | "deep" | "deadline") => {
@@ -1204,12 +1313,12 @@ export default function App() {
       scenario === "balanced" ? "balanced" : scenario === "deep" ? "conservative" : "aggressive";
     setSettings((current) => ({ ...current, replanMode: nextMode }));
     pushAiLog(
-      "应用多方案模拟",
+      "应用方案",
       scenario === "balanced"
-        ? "已应用 Balanced Plan，并准备按平衡策略重排。"
+        ? "已应用 Balanced Plan，并开始智能重排。"
         : scenario === "deep"
-          ? "已应用 Deep Work Plan，并优先保护长专注块。"
-          : "已应用 Deadline First Plan，并优先推进高优先级截止任务。"
+          ? "已应用 Deep Work Plan，并开始智能重排。"
+          : "已应用 Deadline First Plan，并开始智能重排。"
     );
     handleAutoSchedule();
   };
@@ -1228,46 +1337,59 @@ export default function App() {
               isPanelOpen={isPanelOpen}
               focusedDayLabel={focusedDayLabel}
               summaryCards={summaryCards}
+              filterState={filterState}
+              isFilterOpen={isFilterOpen}
               onPrevWeek={() => setWeekStart((current) => addDays(current, -7))}
               onNextWeek={() => setWeekStart((current) => addDays(current, 7))}
               onToday={() => {
-                setWeekStart(startOfWeek(new Date(2026, 4, 11), { weekStartsOn: 0 }));
+                setWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }));
                 setFocusedDayIndex(TODAY_INDEX);
                 showToast("已跳回当前规划周");
               }}
-              onWeekAction={() => {
-                setSelectedSlot(null);
-                showToast("周视图已刷新");
+              onSelectDate={(date) => {
+                const newWeekStart = startOfWeek(date, { weekStartsOn: 0 });
+                setWeekStart(newWeekStart);
+                const diffMs = date.getTime() - newWeekStart.getTime();
+                const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+                setFocusedDayIndex(Math.max(0, Math.min(6, diffDays)));
+                showToast(`已跳转到 ${formatWeekRange(newWeekStart)}`);
               }}
               onTogglePanel={() => setIsPanelOpen((current) => !current)}
               onAutoSchedule={handleAutoSchedule}
+              onToggleFilter={toggleFilter}
+              onClearFilters={clearFilters}
+              onToggleFilterPanel={() => setIsFilterOpen((current) => !current)}
             />
             <div className="flex min-h-0 flex-1 flex-col px-4 pb-4">
-              <CalendarGrid
-                events={events}
-                weekStart={weekStart}
-                isOptimizing={isOptimizing}
-                activeSection={activeSection}
-                focusedDayIndex={focusedDayIndex}
-                selectedSlot={selectedSlot}
-                recentChangeMap={recentChangeMap}
-                onFocusedDayChange={(day) => {
-                  setFocusedDayIndex(day);
-                  setSelectedSlot(null);
-                }}
-                onEventSelect={setSelectedEventId}
-                onEmptySlotSelect={handleOpenSlot}
-                onEventMove={handleEventMove}
-                onEventResize={handleAdjustDuration}
-                onMarkDone={handleMarkDone}
-                onReschedule={handleReschedule}
-                onCannotContinue={runGiveUpAndShowFeedback}
-                onMoreAction={(eventId) => {
-                  setSelectedEventId(eventId);
-                  setIsPanelOpen(true);
-                  showToast("已打开事件详情");
-                }}
-              />
+              {displayEvents.length === 0 && events.length > 0 ? (
+                <FilterEmptyState onClearFilters={clearFilters} />
+              ) : (
+                <CalendarGrid
+                  events={displayEvents}
+                  weekStart={weekStart}
+                  isOptimizing={isOptimizing}
+                  activeSection={activeSection}
+                  focusedDayIndex={focusedDayIndex}
+                  selectedSlot={selectedSlot}
+                  recentChangeMap={recentChangeMap}
+                  onFocusedDayChange={(day) => {
+                    setFocusedDayIndex(day);
+                    setSelectedSlot(null);
+                  }}
+                  onEventSelect={setSelectedEventId}
+                  onEmptySlotSelect={handleOpenSlot}
+                  onEventMove={handleEventMove}
+                  onEventResize={handleAdjustDuration}
+                  onMarkDone={handleMarkDone}
+                  onReschedule={handleReschedule}
+                  onCannotContinue={runGiveUpAndShowFeedback}
+                  onMoreAction={(eventId) => {
+                    setSelectedEventId(eventId);
+                    setIsPanelOpen(true);
+                    showToast("已打开事件详情");
+                  }}
+                />
+              )}
             </div>
           </>
         );
@@ -1343,7 +1465,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-[#f6f7fb] text-slate-900">
+    <div className="h-screen overflow-hidden bg-[var(--color-bg-page)] text-[var(--color-text-primary)]">
       <div className="flex h-full">
         <Sidebar
           activeSection={activeSection}
@@ -1355,7 +1477,7 @@ export default function App() {
           onOpenProfile={() => setProfileOpen(true)}
         />
 
-        <main className="flex min-w-0 flex-1 flex-col bg-[#f8f9fc]">{renderMainContent()}</main>
+        <main className="flex min-w-0 flex-1 flex-col bg-[var(--color-bg-page)]">{renderMainContent()}</main>
 
         <RightTaskPanel
           isOpen={isPanelOpen}
@@ -1363,6 +1485,7 @@ export default function App() {
           activeSection={activeSection}
           focusedDayLabel={focusedDayLabel}
           focusedDayIndex={focusedDayIndex}
+          weekStart={weekStart}
           todayTasks={focusedDayTasks}
           allTasks={tasks}
           allEvents={events}

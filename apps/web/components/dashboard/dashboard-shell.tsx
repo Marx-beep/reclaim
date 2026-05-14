@@ -7,19 +7,23 @@ import { TopBar } from "@/components/dashboard/top-bar";
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const syncCalendars = async () => {
-    await fetch("/api/calendars/sync", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ force: true }) });
+    await fetch("/api/calendars/sync", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ force: true })
+    });
   };
 
   return (
     <AppProviders>
-      <div className="flex min-h-screen overflow-hidden bg-slate-50">
+      <div className="flex min-h-screen overflow-hidden">
         <SidebarNav />
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="shrink-0">
-            <TopBar onSync={syncCalendars} />
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <TopBar onSync={syncCalendars} />
+          <main className="min-h-0 flex-1 overflow-hidden">
+            <div className="flex h-full flex-col px-4 py-5">{children}</div>
+          </main>
+        </div>
       </div>
     </AppProviders>
   );
