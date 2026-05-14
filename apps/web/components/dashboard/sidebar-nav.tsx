@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
-import { CalendarDays, ChartColumn, Link2, Settings, Zap } from "lucide-react";
+import { CalendarDays, ChartColumn, Link2, Settings, Sparkles, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { t } from "@/lib/i18n";
 
@@ -11,6 +11,7 @@ const nav = t("nav");
 const items = [
   { href: "/", label: nav.dashboard, icon: Zap },
   { href: "/calendar", label: nav.calendar, icon: CalendarDays },
+  { href: "/planner", label: "AI Planner", icon: Sparkles },
   { href: "/links", label: nav.links, icon: Link2 },
   { href: "/analytics", label: nav.analytics, icon: ChartColumn },
   { href: "/settings", label: nav.settings, icon: Settings }
