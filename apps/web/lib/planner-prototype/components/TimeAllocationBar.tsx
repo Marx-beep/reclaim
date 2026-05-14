@@ -1,112 +1,57 @@
-import type { CalendarEvent } from "../types/calendar";
-import { WORKING_HOURS_PER_WEEK, formatHours } from "../utils/calendarUtils";
-
 interface TimeAllocationBarProps {
-  events: CalendarEvent[];
-  compact?: boolean;
+  totalMinutes: number;
+  categoryMinutes: Record<string, number>;
 }
 
-const segmentMeta = [
-  { key: "focus", label: "专注目标", color: "#22c55e" },
-  { key: "meeting", label: "团队会议", color: "#3b82f6" },
-  { key: "other", label: "其他工作", color: "#64748b" },
-  { key: "free", label: "空闲时间", color: "#d1d5db" }
-] as const;
+const LEGEND: Array<{ key: string; label: string; color: string }> = [
+  { key: "focus", label: "专注", color: "var(--color-event-focus)" },
+  { key: "meeting", label: "会议", color: "var(--color-event-meeting)" },
+  { key: "task", label: "任务", color: "var(--color-event-task)" },
+  { key: "habit", label: "习惯", color: "var(--color-event-habit)" },
+  { key: "break", label: "休息", color: "var(--color-event-break)" }
+];
 
-export function TimeAllocationBar({ events, compact = false }: TimeAllocationBarProps) {
-  const totals = events.reduce(
-    (acc, event) => {
-      if (event.status === "completed" || event.status === "unscheduled") {
-        return acc;
-      }
+function fmt(minutes: number) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? (m > 0 ? `${h}h${m}m` : `${h}h`) : `${m}m`;
+}
 
-      if (event.type === "focus") {
-        acc.focus += event.duration;
-      } else if (event.type === "meeting") {
-        acc.meeting += event.duration;
-      } else {
-        acc.other += event.duration;
-      }
-
-      return acc;
-    },
-    { focus: 0, meeting: 0, other: 0 }
-  );
-
-  const free = Math.max(WORKING_HOURS_PER_WEEK - totals.focus - totals.meeting - totals.other, 0);
-  const segments = [
-    { key: "focus", label: "专注目标", color: "#22c55e", value: totals.focus },
-    { key: "meeting", label: "团队会议", color: "#3b82f6", value: totals.meeting },
-    { key: "other", label: "其他工作", color: "#64748b", value: totals.other },
-    { key: "free", label: "空闲时间", color: "#d1d5db", value: free }
-  ] as const;
-
-  if (compact) {
-    return (
-      <div className="rounded-[18px] border border-[#e8ebf3] bg-[#fbfcff] px-4 py-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-slate-600">
-          {segmentMeta.map((segment) => {
-            const activeSegment = segments.find((item) => item.key === segment.key)!;
-
-            return (
-              <div key={segment.key} className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: segment.color }} />
-                <span>
-                  {segment.label} <span className="font-semibold text-slate-900">{formatHours(activeSegment.value)}</span>
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-          <div className="flex h-full w-full">
-            {segments.map((segment) => (
-              <div
-                key={segment.key}
-                className="h-full transition-[width] duration-500"
-                style={{
-                  width: `${(segment.value / WORKING_HOURS_PER_WEEK) * 100}%`,
-                  backgroundColor: segment.color
-                }}
-              />
-            ))}
+export function TimeAllocationBar({ totalMinutes, categoryMinutes }: TimeAllocationBarProps) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--color-border-subtle)] bg-white px-4 py-2.5 shadow-[0_1px_4px_rgba(15,23,42,0.05)]">
+      <div className="flex items-center gap-2">
+        <div className="h-2.5 w-40 overflow-hidden rounded-full bg-[var(--color-border-subtle)]">
+          <div className="flex h-full">
+            {LEGEND.map((item) => {
+              const minutes = categoryMinutes[item.key] ?? 0;
+              if (minutes === 0) return null;
+              const pct = Math.max(1, (minutes / Math.max(totalMinutes, 1)) * 100);
+              return (
+                <div
+                  key={item.key}
+                  className="h-full transition-all duration-300"
+                  style={{ width: `${pct}%`, backgroundColor: item.color }}
+                  title={`${item.label}：${fmt(minutes)}`}
+                />
+              );
+            })}
           </div>
         </div>
+        <span className="text-xs text-[var(--color-text-muted)]">{fmt(totalMinutes)}</span>
       </div>
-    );
-  }
-
-  return (
-    <div className="rounded-2xl border border-[#e8ebf3] bg-white px-4 py-3 shadow-soft">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] text-slate-600">
-        {segmentMeta.map((segment) => {
-          const activeSegment = segments.find((item) => item.key === segment.key)!;
-
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {LEGEND.map((item) => {
+          const minutes = categoryMinutes[item.key] ?? 0;
           return (
-            <div key={segment.key} className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: segment.color }} />
-              <span>
-                {segment.label} <span className="font-semibold text-slate-900">{formatHours(activeSegment.value)}</span>
+            <div key={item.key} className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: item.color }} />
+              <span className="text-[11px] text-[var(--color-text-muted)]">
+                {item.label} <span className="font-medium text-[var(--color-text-secondary)]">{fmt(minutes)}</span>
               </span>
             </div>
           );
         })}
-      </div>
-
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-        <div className="flex h-full w-full">
-          {segments.map((segment) => (
-            <div
-              key={segment.key}
-              className="h-full transition-[width] duration-500"
-              style={{
-                width: `${(segment.value / WORKING_HOURS_PER_WEEK) * 100}%`,
-                backgroundColor: segment.color
-              }}
-            />
-          ))}
-        </div>
       </div>
     </div>
   );

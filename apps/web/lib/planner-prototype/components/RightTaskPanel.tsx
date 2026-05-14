@@ -1,5 +1,6 @@
-import { PanelRightClose, Plus, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { PanelRightClose, Plus, Sparkles, Clock, CheckCircle2, AlertTriangle, RefreshCw, MessageSquare, CalendarDays } from "lucide-react";
+import { addDays, format } from "date-fns";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   AiLog,
   CalendarEvent,
@@ -20,19 +21,44 @@ import {
   priorityLabel
 } from "../utils/calendarUtils";
 
-type PanelView = "plan" | "details" | "ai";
+type PanelView = "plan" | "ai";
 
 const sectionLabels: Record<NavigationSection, string> = {
-  Planner: "日历工作台",
+  Planner: "日程规划",
   Tasks: "任务",
   Habits: "习惯",
   Focus: "专注时间",
-  Meetings: "智能会议",
+  Meetings: "会议",
   Links: "预约链接",
   Sync: "日历同步",
   Analytics: "统计分析",
   Settings: "设置"
 };
+
+const panelIcons: Record<string, React.ReactNode> = {
+  "创建": <Plus className="h-3.5 w-3.5" />,
+  "安排": <CheckCircle2 className="h-3.5 w-3.5" />,
+  "跳过": <RefreshCw className="h-3.5 w-3.5" />,
+  "重排": <RefreshCw className="h-3.5 w-3.5" />,
+  "更新": <RefreshCw className="h-3.5 w-3.5" />,
+  "切换": <RefreshCw className="h-3.5 w-3.5" />,
+  "复制": <CheckCircle2 className="h-3.5 w-3.5" />,
+  "分析": <MessageSquare className="h-3.5 w-3.5" />,
+  "干不下去了": <AlertTriangle className="h-3.5 w-3.5" />
+};
+
+function getLogIcon(action: string): React.ReactNode {
+  const key = Object.keys(panelIcons).find((k) => action.includes(k));
+  return key ? panelIcons[key] : <Clock className="h-3.5 w-3.5" />;
+}
+
+function getLogAccent(action: string): { dot: string; bg: string; border: string; text: string } {
+  if (action.includes("干不下去了")) return { dot: "bg-[var(--color-accent-amber)]", bg: "bg-[var(--color-accent-amber)]/8", border: "border-[var(--color-accent-amber)]/20", text: "text-[var(--color-accent-amber)]" };
+  if (action.includes("会议")) return { dot: "bg-[var(--color-event-meeting)]", bg: "bg-[var(--color-event-meeting-light)]", border: "border-[var(--color-event-meeting)]/20", text: "text-[var(--color-event-meeting)]" };
+  if (action.includes("任务") || action.includes("习惯")) return { dot: "bg-[var(--color-event-task)]", bg: "bg-[var(--color-event-task-light)]", border: "border-[var(--color-event-task)]/20", text: "text-[var(--color-event-task)]" };
+  if (action.includes("专注")) return { dot: "bg-[var(--color-event-focus)]", bg: "bg-[var(--color-event-focus-light)]", border: "border-[var(--color-event-focus)]/20", text: "text-[var(--color-event-focus-text)]" };
+  return { dot: "bg-[var(--color-text-muted)]", bg: "bg-[var(--color-bg-page-subtle)]", border: "border-[var(--color-border-subtle)]", text: "text-[var(--color-text-secondary)]" };
+}
 
 interface RightTaskPanelProps {
   isOpen: boolean;
@@ -40,6 +66,7 @@ interface RightTaskPanelProps {
   activeSection: NavigationSection;
   focusedDayLabel: string;
   focusedDayIndex: number;
+  weekStart: Date;
   todayTasks: CalendarEvent[];
   allTasks: TaskItem[];
   allEvents: CalendarEvent[];
@@ -72,10 +99,10 @@ interface RightTaskPanelProps {
 const priorityOptions: EventPriority[] = ["P1", "P2", "P3", "P4"];
 const dayLabels = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 const giveUpStepToneClasses: Record<GiveUpFeedback["steps"][number]["tone"], string> = {
-  focus: "border-sky-200 bg-sky-50/80",
-  recovery: "border-amber-200 bg-amber-50/80",
-  light: "border-emerald-200 bg-emerald-50/80",
-  resume: "border-violet-200 bg-violet-50/80"
+  focus: "border-[var(--color-event-focus)]/30 bg-[var(--color-event-focus-light)]",
+  recovery: "border-[var(--color-accent-amber)]/30 bg-[var(--color-accent-amber)]/8",
+  light: "border-[var(--color-event-focus)]/30 bg-[var(--color-event-focus-light)]",
+  resume: "border-[var(--color-primary)]/30 bg-[var(--color-primary-lighter)]"
 };
 const dueTimeOptions = Array.from({ length: (19 - 8) * 4 + 1 }, (_, index) => {
   const value = 8 + index * 0.25;
@@ -92,19 +119,14 @@ function compareDeadlineWithSlot(
   dueDay: number,
   dueHour: number
 ) {
-  if (!selectedSlot) {
-    return null;
-  }
-
+  if (!selectedSlot) return null;
   const endHour = selectedSlot.startHour + durationHours;
   const startsAfterDeadlineDay = selectedSlot.day > dueDay;
   const endsAfterDeadlineTime = selectedSlot.day === dueDay && endHour > dueHour;
-
   if (startsAfterDeadlineDay || endsAfterDeadlineTime) {
-    return "当前选中的开始时段可能赶不上你设置的截止时间，系统会尝试另找更早空档。";
+    return { tone: "warn" as const, message: "当前选中的时段可能赶不上截止时间，系统会另找更早空档。" };
   }
-
-  return "当前选中的开始时段在截止时间之前，系统会优先尝试把任务放在这里。";
+  return { tone: "ok" as const, message: "当前时段在截止前，系统会优先使用这里。" };
 }
 
 function buildPlacementPreview(
@@ -116,465 +138,329 @@ function buildPlacementPreview(
   dueHour: number
 ) {
   if (selectedSlot) {
-    const selectedCandidate = {
-      id: "__preview__",
-      title: "preview",
-      day: selectedSlot.day,
-      startHour: selectedSlot.startHour,
-      duration: durationHours
-    };
-
-    const selectedConflicts = allEvents.some(
-      (event) => event.status !== "completed" && event.status !== "unscheduled" && hasConflict(selectedCandidate, event)
-    );
+    const selectedCandidate = { id: "__preview__", title: "preview", day: selectedSlot.day, startHour: selectedSlot.startHour, duration: durationHours };
+    const selectedConflicts = allEvents.some((event) => event.status !== "completed" && event.status !== "unscheduled" && hasConflict(selectedCandidate, event));
     const selectedEndsAt = getEventEndHour(selectedCandidate);
-    const selectedBeforeDeadline =
-      selectedSlot.day < dueDay || (selectedSlot.day === dueDay && selectedEndsAt <= dueHour);
-
+    const selectedBeforeDeadline = selectedSlot.day < dueDay || (selectedSlot.day === dueDay && selectedEndsAt <= dueHour);
     if (!selectedConflicts && selectedBeforeDeadline) {
-      return {
-        day: selectedSlot.day,
-        startHour: selectedSlot.startHour,
-        endHour: selectedEndsAt,
-        note: "系统会优先尝试使用你当前选中的起始时段。"
-      };
+      return { day: selectedSlot.day, startHour: selectedSlot.startHour, endHour: selectedEndsAt, note: "系统会优先使用当前选中的时段。" };
     }
   }
-
   const lastDay = Math.max(focusedDayIndex, dueDay);
   for (let day = focusedDayIndex; day <= lastDay; day += 1) {
-    const preferredHours =
-      day === dueDay
-        ? [9, 10, 11, 13.5, 14.5, 16].filter((hour) => hour + durationHours <= dueHour)
-        : [9, 10, 11, 13.5, 14.5, 16];
-    const slot = findNextAvailableSlot(allEvents, day, durationHours, {
-      preferredHours: preferredHours.length > 0 ? preferredHours : undefined
-    });
+    const preferredHours = day === dueDay
+      ? [9, 10, 11, 13.5, 14.5, 16].filter((hour) => hour + durationHours <= dueHour)
+      : [9, 10, 11, 13.5, 14.5, 16];
+    const slot = findNextAvailableSlot(allEvents, day, durationHours, { preferredHours: preferredHours.length > 0 ? preferredHours : undefined });
     if (slot !== null) {
       const endHour = slot + durationHours;
       if (day < dueDay || (day === dueDay && endHour <= dueHour)) {
-        return {
-          day,
-          startHour: slot,
-          endHour,
-          note: day === dueDay ? "这是截止前较稳妥的最后一个空档。" : "AI 预计会优先把它塞进这个可用窗口。"
-        };
+        return { day, startHour: slot, endHour, note: day === dueDay ? "截止前较稳妥的最后一个空档。" : "已找到最近可用窗口。" };
       }
     }
   }
-
   return null;
 }
 
 export function RightTaskPanel({
-  isOpen,
-  selectedSlot,
-  activeSection,
-  focusedDayLabel,
-  focusedDayIndex,
-  todayTasks,
-  allTasks,
-  allEvents,
-  selectedEvent,
-  linkedTask,
-  suggestions,
-  aiLogs,
-  latestSummary,
-  latestWarnings,
-  giveUpFeedback,
-  focusHours,
-  meetingHours,
-  requestedView = null,
-  requestedViewToken = 0,
-  onOpen,
-  onClose,
-  onSelectTask,
-  onClearSelectedSlot,
-  onSelectSuggestedSlot,
-  onAddTask,
-  onScheduleTask,
-  onMarkDone,
-  onApplySuggestion,
-  onDismissSuggestion,
-  onAutoSchedule,
-  onPreviewScenario,
-  onApplyScenario
+  isOpen, selectedSlot, activeSection, focusedDayLabel, focusedDayIndex, weekStart,
+  todayTasks, allTasks, allEvents, selectedEvent, linkedTask,
+  suggestions, aiLogs, latestSummary, latestWarnings, giveUpFeedback,
+  focusHours, meetingHours, requestedView, requestedViewToken,
+  onOpen, onClose, onSelectTask, onClearSelectedSlot, onSelectSuggestedSlot,
+  onAddTask, onScheduleTask, onMarkDone, onApplySuggestion, onDismissSuggestion,
+  onAutoSchedule, onPreviewScenario, onApplyScenario
 }: RightTaskPanelProps) {
   const [title, setTitle] = useState("");
   const [durationHours, setDurationHours] = useState(1);
   const [priority, setPriority] = useState<EventPriority>("P2");
   const [dueDay, setDueDay] = useState(focusedDayIndex);
   const [dueHour, setDueHour] = useState(18);
+  const [dueMinute, setDueMinute] = useState(() => Math.round((dueHour % 1) * 60));
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const timePickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setDueMinute(Math.round((dueHour % 1) * 60));
+  }, [dueHour]);
+
+  const dueHourInt = Math.floor(dueHour);
+  const setDueTime = (h: number, m: number) => {
+    setDueHour(h + m / 60);
+    setDueMinute(m);
+  };
+
+  useEffect(() => {
+    if (!timePickerOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (timePickerRef.current && !timePickerRef.current.contains(e.target as Node)) {
+        setTimePickerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [timePickerOpen]);
+
   const [urgent, setUrgent] = useState(false);
   const [energyLevel, setEnergyLevel] = useState<"high" | "medium" | "low">("medium");
   const [panelView, setPanelView] = useState<PanelView>("plan");
+  const [showAllLogs, setShowAllLogs] = useState(false);
 
   useEffect(() => {
     if (selectedSlot) {
       setDueDay(selectedSlot.day);
       setDueHour(Math.max(selectedSlot.startHour + durationHours, dueHour));
-      return;
+    } else {
+      setDueDay(focusedDayIndex);
     }
-    setDueDay(focusedDayIndex);
   }, [focusedDayIndex, selectedSlot]);
 
   useEffect(() => {
-    if (selectedEvent) {
-      setPanelView("details");
-      return;
-    }
-    if (activeSection !== "Planner") {
-      setPanelView("ai");
-      return;
-    }
+    if (selectedEvent) { return; }
+    if (activeSection !== "Planner") { setPanelView("ai"); return; }
     setPanelView("plan");
   }, [activeSection, selectedEvent]);
 
-  const groupedTasks = useMemo(
-    () =>
-      priorityOptions
-        .map((level) => ({
-          label: priorityLabel(level),
-          level,
-          items: todayTasks.filter((task) => task.priority === level && task.status !== "unscheduled")
-        }))
-        .filter((group) => group.items.length > 0),
-    [todayTasks]
-  );
-
-  const recommendedWindows = useMemo(
-    () => findOpenWindowsForDay(allEvents, focusedDayIndex, 0.5, 4),
-    [allEvents, focusedDayIndex]
-  );
-  const unscheduledTasks = allTasks.filter((task) => task.status === "unscheduled");
-  const slotDeadlineHint = compareDeadlineWithSlot(selectedSlot, durationHours, dueDay, dueHour);
-  const predictedPlacement = useMemo(
-    () => buildPlacementPreview(allEvents, selectedSlot, focusedDayIndex, durationHours, dueDay, dueHour),
-    [allEvents, selectedSlot, focusedDayIndex, durationHours, dueDay, dueHour]
-  );
-  const completedEvents = allEvents.filter((event) => event.status === "completed");
-  const overtimeEvents = allEvents.filter((event) => event.status === "overtime");
-  const focusScore = Math.min(100, Math.round((focusHours / Math.max(meetingHours + focusHours, 1)) * 100));
-  const interruptionCount = aiLogs.filter((log) => log.action.includes("干不下去了")).length;
-  const latestGiveUpLog = aiLogs[0]?.action.includes("干不下去了") ? aiLogs[0] : null;
-
   useEffect(() => {
-    if (!requestedView) {
-      return;
-    }
+    if (!requestedView) return;
     setPanelView(requestedView);
   }, [requestedView, requestedViewToken]);
 
+  const groupedTasks = useMemo(() =>
+    priorityOptions
+      .map((level) => ({ label: priorityLabel(level), level, items: todayTasks.filter((task) => task.priority === level) }))
+      .filter((group) => group.items.length > 0),
+    [todayTasks]
+  );
+
+  const recommendedWindows = useMemo(() => findOpenWindowsForDay(allEvents, focusedDayIndex, 0.5, 4), [allEvents, focusedDayIndex]);
+  const unscheduledTasks = allTasks.filter((task) => task.status === "unscheduled");
+  const slotDeadlineHint = compareDeadlineWithSlot(selectedSlot, durationHours, dueDay, dueHour);
+  const predictedPlacement = useMemo(() => buildPlacementPreview(allEvents, selectedSlot, focusedDayIndex, durationHours, dueDay, dueHour), [allEvents, selectedSlot, focusedDayIndex, durationHours, dueDay, dueHour]);
+  const completedEvents = allEvents.filter((event) => event.status === "completed");
+  const overtimeEvents = allEvents.filter((event) => event.status === "overtime");
+  const focusScore = Math.min(100, Math.round((focusHours / Math.max(meetingHours + focusHours, 1)) * 100));
+
+  const visibleLogs = showAllLogs ? aiLogs : aiLogs.slice(0, 3);
+
   if (!isOpen) {
     return (
-      <aside className="flex h-full w-[72px] shrink-0 flex-col items-center justify-between border-l border-[#dfe6f2] bg-[linear-gradient(180deg,#fbfcff_0%,#f5f8fc_100%)] px-3 py-5">
-        <button
-          type="button"
-          onClick={onOpen}
-          className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-semibold text-slate-700 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
-        >
-          打开
+      <aside className="flex h-full w-[72px] shrink-0 flex-col items-center justify-between border-l border-[var(--color-border-default)] bg-white px-3 py-5">
+        <button type="button" onClick={onOpen} className="rounded-2xl border border-[var(--color-border-default)] bg-white px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] shadow-[0_2px_8px_rgba(15,23,42,0.06)] transition hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-lighter)] hover:text-[var(--color-primary-text)]">
+          展开
         </button>
-        <div className="rounded-2xl border border-slate-200 bg-white px-2 py-3 text-center text-[11px] font-medium text-slate-500 shadow-[0_8px_18px_rgba(15,23,42,0.04)]">
-          {todayTasks.length}
-          <div className="mt-1">今日</div>
+        <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] px-2 py-3 text-center shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
+          <div className="text-[15px] font-semibold text-[var(--color-text-primary)]">{todayTasks.length}</div>
+          <div className="mt-1 text-[11px] text-[var(--color-text-muted)]">今日</div>
         </div>
       </aside>
     );
   }
 
   return (
-    <aside className="flex h-full w-[352px] shrink-0 flex-col border-l border-[#dfe6f2] bg-[linear-gradient(180deg,#fbfcff_0%,#f8fafc_100%)]">
-      <div className="planner-side-scroll flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-5 pr-4">
-        <section className="flex items-center justify-between rounded-[24px] border border-[#dfe6f2] bg-[linear-gradient(135deg,#ffffff_0%,#f2f7ff_100%)] px-4 py-3 shadow-[0_16px_36px_rgba(15,23,42,0.06)]">
+    <aside className="flex h-full w-[340px] shrink-0 flex-col border-l border-[var(--color-border-subtle)] bg-[var(--color-bg-page)]">
+      <div className="planner-side-scroll flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 pr-3">
+        <section className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] px-4 py-3 shadow-[0_1px_4px_rgba(15,23,42,0.05)]">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">当前聚焦日</div>
-            <div className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-slate-950">{focusedDayLabel}</div>
-            <div className="mt-1 text-[12px] text-slate-500">
-              {activeSection === "Planner" ? "动态重排工作台" : `${sectionLabels[activeSection]} 已联动到 AI 面板`}
+            <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-muted)]">当前聚焦</div>
+            <div className="mt-1 text-[16px] font-semibold text-[var(--color-text-primary)]">{focusedDayLabel}</div>
+            <div className="mt-1 text-[12px] text-[var(--color-text-muted)]">
+              {activeSection === "Planner" ? "已关联到日程规划" : `${sectionLabels[activeSection]}`}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-sky-200 hover:text-slate-900"
-          >
+          <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border-subtle)] text-[var(--color-text-muted)] transition hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-secondary)]">
             <PanelRightClose className="h-4 w-4" />
           </button>
         </section>
 
-        <section className="rounded-2xl border border-[#dfe6f2] bg-white/90 p-1 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
-          <div className="grid grid-cols-3 gap-1">
-            {[
-              { key: "plan", label: "计划" },
-              { key: "details", label: "详情" },
-              { key: "ai", label: "AI" }
-            ].map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setPanelView(item.key as PanelView)}
-                className={`rounded-xl px-3 py-2 text-[12px] font-medium transition ${
-                  panelView === item.key ? "bg-slate-900 text-white shadow-[0_8px_18px_rgba(15,23,42,0.14)]" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
+        <section className="flex rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] p-1">
+          {[{ key: "plan", label: "计划" }, { key: "ai", label: "助手" }].map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setPanelView(item.key as PanelView)}
+              className={`flex-1 rounded-lg px-3 py-1.5 text-[12px] font-medium transition ${
+                panelView === item.key
+                  ? "bg-[var(--color-btn-solid)] text-white"
+                  : "text-[var(--color-text-muted)] hover:bg-white hover:text-[var(--color-text-secondary)]"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
         </section>
 
         {panelView === "plan" ? (
           <>
-            <section className="rounded-2xl border border-[#e8ebf3] bg-[#fbfcff] p-4 shadow-soft">
-              <div className="text-[14px] font-semibold text-slate-950">快速添加任务</div>
-              <div className="mt-3">
-                <input
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      onAddTask({ title, durationHours, priority, dueDay, dueHour, urgent, energyLevel });
-                      setTitle("");
-                    }
-                  }}
-                  placeholder="添加一个任务..."
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                />
-              </div>
+            <section className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] p-4 shadow-[0_1px_4px_rgba(15,23,42,0.04)]">
+              <div className="mb-3 text-[13px] font-semibold text-[var(--color-text-primary)]">快速添加</div>
+              <input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    onAddTask({ title, durationHours, priority, dueDay, dueHour, urgent, energyLevel });
+                    setTitle("");
+                  }
+                }}
+                placeholder="输入任务名称，回车添加..."
+                className="w-full rounded-xl border border-[var(--color-border-default)] bg-white px-3 py-2.5 text-[13px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-lighter)]"
+              />
 
               {selectedSlot ? (
-                <div className="mt-3 flex items-center justify-between rounded-xl border border-indigo-100 bg-indigo-50/70 px-3 py-2 text-[12px] text-indigo-800">
-                  <span>
-                    正在安排到 {focusedDayLabel} {formatTime(selectedSlot.startHour)}
+                <div className="mt-2 flex items-center justify-between rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary-lighter)] px-3 py-2 text-[12px] text-[var(--color-primary-text)]">
+                  <span className="flex items-center gap-1.5">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    安排到 {focusedDayLabel} {formatTime(selectedSlot.startHour)}
                   </span>
-                  <button type="button" className="font-medium text-indigo-700 transition hover:text-indigo-900" onClick={onClearSelectedSlot}>
-                    清除
-                  </button>
+                  <button type="button" className="font-medium hover:opacity-75" onClick={onClearSelectedSlot}>清除</button>
                 </div>
               ) : null}
 
-              <div className="mt-4 space-y-4">
+              <div className="mt-3 space-y-3">
                 <div>
-                  <div className="mb-2 flex items-center justify-between text-[12px] font-medium text-slate-500">
+                  <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-[var(--color-text-muted)]">
                     <span>时长</span>
-                    <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] text-indigo-700">
-                      {durationHours.toFixed(durationHours % 1 === 0 ? 0 : 2)} 小时
-                    </span>
+                    <span className="rounded-full bg-[var(--color-primary-lighter)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary-text)]">{durationHours.toFixed(durationHours % 1 === 0 ? 0 : 2)} 小时</span>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <input
-                      type="range"
-                      min={0.25}
-                      max={4}
-                      step={0.25}
-                      value={durationHours}
-                      onChange={(event) => setDurationHours(Number(event.target.value))}
-                      className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-indigo-600"
-                    />
-                    <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+                  <div className="rounded-xl border border-[var(--color-border-subtle)] bg-white px-3 py-2">
+                    <input type="range" min={0.25} max={4} step={0.25} value={durationHours} onChange={(event) => setDurationHours(Number(event.target.value))} className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[var(--color-border-default)] accent-[var(--color-primary)]" />
+                    <div className="mt-1.5 flex items-center justify-between text-[10px] text-[var(--color-text-muted)]">
                       <span>15 分钟</span>
-                      <span>拖动设置时长</span>
                       <span>4 小时</span>
                     </div>
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="mb-1.5 text-[11px] font-medium text-[var(--color-text-muted)]">截止日期</div>
+                    <input
+                      type="date"
+                      value={format(addDays(weekStart, dueDay), "yyyy-MM-dd")}
+                      min={format(weekStart, "yyyy-MM-dd")}
+                      max={format(addDays(weekStart, 13), "yyyy-MM-dd")}
+                      onChange={(e) => {
+                        const selected = new Date(e.target.value + "T00:00:00");
+                        const diffMs = selected.getTime() - weekStart.getTime();
+                        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+                        setDueDay(Math.max(0, Math.min(6, diffDays)));
+                      }}
+                      className="w-full rounded-xl border border-[var(--color-border-default)] bg-white px-2 py-2 text-[12px] text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-lighter)]"
+                    />
+                  </div>
+                  <div className="relative" ref={timePickerRef}>
+                    <div className="mb-1.5 text-[11px] font-medium text-[var(--color-text-muted)]">截止时刻</div>
+                    <button
+                      type="button"
+                      onClick={() => setTimePickerOpen(!timePickerOpen)}
+                      className="flex w-full items-center justify-between rounded-xl border border-[var(--color-border-default)] bg-white px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-lighter)]"
+                    >
+                      <span className="tabular-nums">{String(dueHourInt).padStart(2, "0")}:{String(dueMinute).padStart(2, "0")}</span>
+                      <Clock className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
+                    </button>
+                    {timePickerOpen && (
+                      <div className="absolute left-0 right-0 top-full z-30 mt-1 rounded-xl border border-[var(--color-border-subtle)] bg-white p-3 shadow-lg">
+                        <div className="space-y-2.5">
+                          <div>
+                            <div className="mb-1 flex items-center justify-between text-[10px] text-[var(--color-text-muted)]">
+                              <span>时</span>
+                              <span className="tabular-nums font-medium text-slate-700">{String(dueHourInt).padStart(2, "0")} 时</span>
+                            </div>
+                            <input
+                              type="range" min={0} max={23} step={1}
+                              value={dueHourInt}
+                              onChange={(e) => setDueTime(Number(e.target.value), dueMinute)}
+                              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-[var(--color-primary)]"
+                            />
+                          </div>
+                          <div>
+                            <div className="mb-1 flex items-center justify-between text-[10px] text-[var(--color-text-muted)]">
+                              <span>分</span>
+                              <span className="tabular-nums font-medium text-slate-700">{String(dueMinute).padStart(2, "0")} 分</span>
+                            </div>
+                            <input
+                              type="range" min={0} max={59} step={1}
+                              value={dueMinute}
+                              onChange={(e) => setDueTime(dueHourInt, Number(e.target.value))}
+                              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-emerald-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-2 border-t border-[var(--color-border-subtle)] pt-2 text-center text-[11px] tabular-nums font-semibold text-[var(--color-primary)]">
+                          {String(dueHourInt).padStart(2, "0")}:{String(dueMinute).padStart(2, "0")}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div>
-                  <div className="mb-2 text-[12px] font-medium text-slate-500">优先级</div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="mb-1.5 text-[11px] font-medium text-[var(--color-text-muted)]">优先级</div>
+                  <div className="flex gap-1">
                     {priorityOptions.map((option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        onClick={() => setPriority(option)}
-                        className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
-                          priority === option ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        }`}
-                      >
+                      <button key={option} type="button" onClick={() => setPriority(option)} className={`whitespace-nowrap flex-1 rounded-lg px-2 py-1.5 text-[11px] font-medium transition ${priority === option ? "bg-[var(--color-btn-solid)] text-white" : "border border-[var(--color-border-subtle)] bg-white text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"}`}>
                         {priorityLabel(option)}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="mb-2 text-[12px] font-medium text-slate-500">截止日期</div>
-                    <select
-                      value={String(dueDay)}
-                      onChange={(event) => setDueDay(Number(event.target.value))}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                    >
-                      {dayLabels.map((label, index) => (
-                        <option key={label} value={index}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <div className="mb-2 text-[12px] font-medium text-slate-500">截止时刻</div>
-                    <select
-                      value={String(dueHour)}
-                      onChange={(event) => setDueHour(normalizeSliderHour(Number(event.target.value)))}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                    >
-                      {dueTimeOptions.map((option) => (
-                        <option key={option.label} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
                 <div>
-                  <div className="mb-2 text-[12px] font-medium text-slate-500">能量需求</div>
-                  <div className="flex gap-2">
+                  <div className="mb-1.5 text-[11px] font-medium text-[var(--color-text-muted)]">精力需求</div>
+                  <div className="flex gap-1.5">
                     {(["high", "medium", "low"] as const).map((option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        onClick={() => setEnergyLevel(option)}
-                        className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
-                          energyLevel === option ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        }`}
-                      >
+                      <button key={option} type="button" onClick={() => setEnergyLevel(option)} className={`flex-1 rounded-lg py-1.5 text-[11px] font-medium transition ${energyLevel === option ? "bg-[var(--color-btn-primary)] text-white" : "border border-[var(--color-border-subtle)] bg-white text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"}`}>
                         {energyLabel(option)}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[12px] text-slate-600">
-                  当前截止：{dayLabels[dueDay]} {formatTime(dueHour)}
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                  <div className="text-[12px] font-semibold text-slate-900">计划摘要</div>
-                  <div className="mt-2 space-y-2 text-[12px] text-slate-600">
-                    <div>预计时长：{durationHours.toFixed(durationHours % 1 === 0 ? 0 : 2)} 小时</div>
-                    <div>任务强度：{energyLabel(energyLevel)}</div>
-                    <div>
-                      安排策略：
-                      {selectedSlot
-                        ? ` 优先尝试从 ${dayLabels[selectedSlot.day]} ${formatTime(selectedSlot.startHour)} 开始`
-                        : urgent
-                          ? " 作为紧急任务，优先插入最近可用时间"
-                          : " 自动寻找截止前的合适空档"}
-                    </div>
+                {slotDeadlineHint && (
+                  <div className={`rounded-xl px-3 py-2 text-[11px] leading-relaxed ${slotDeadlineHint.tone === "warn" ? "border border-[var(--color-accent-amber)]/30 bg-[var(--color-accent-amber)]/8 text-[var(--color-accent-amber)]" : "border border-[var(--color-event-focus)]/30 bg-[var(--color-event-focus-light)] text-[var(--color-event-focus-text)]"}`}>
+                    {slotDeadlineHint.message}
                   </div>
-                  {slotDeadlineHint ? (
-                    <div
-                      className={`mt-3 rounded-xl px-3 py-2 text-[12px] leading-5 ${
-                        slotDeadlineHint.includes("赶不上")
-                          ? "border border-amber-100 bg-amber-50 text-amber-800"
-                          : "border border-emerald-100 bg-emerald-50 text-emerald-700"
-                      }`}
-                    >
-                      {slotDeadlineHint}
-                    </div>
-                  ) : null}
-                </div>
+                )}
 
-                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 px-4 py-3">
-                  <div className="text-[12px] font-semibold text-indigo-900">AI 预计落点</div>
-                  {predictedPlacement ? (
-                    <div className="mt-2 space-y-2 text-[12px] text-indigo-800">
-                      <div>
-                        预计安排到：{dayLabels[predictedPlacement.day]} {formatTime(predictedPlacement.startHour)} -{" "}
-                        {formatTime(predictedPlacement.endHour)}
-                      </div>
-                      <div className="text-indigo-700">{predictedPlacement.note}</div>
-                    </div>
-                  ) : (
-                    <div className="mt-2 text-[12px] leading-5 text-amber-800">
-                      按你现在设置的时长和截止时间，截止前可能没有合适空档。提交后这条任务大概率会进入“未安排”并在 AI 面板里提示风险。
-                    </div>
-                  )}
-                </div>
-
-                <label className="flex items-center gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-[12px] text-rose-700">
-                  <input type="checkbox" checked={urgent} onChange={(event) => setUrgent(event.target.checked)} />
-                  作为紧急任务立刻插入
+                <label className="flex items-center gap-2 rounded-xl border border-[var(--color-border-subtle)] bg-white px-3 py-2 text-[12px] text-[var(--color-text-secondary)]">
+                  <input type="checkbox" checked={urgent} onChange={(event) => setUrgent(event.target.checked)} className="accent-[var(--color-primary)]" />
+                  标记为紧急，立刻插入最近空档
                 </label>
-              </div>
 
-              <button
-                type="button"
-                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[10px] bg-[#4f46e5] px-4 py-2.5 text-[13px] font-medium text-white shadow-soft transition hover:bg-[#4338ca]"
-                onClick={() => {
-                  onAddTask({ title, durationHours, priority, dueDay, dueHour, urgent, energyLevel });
-                  setTitle("");
-                  setDurationHours(1);
-                  setPriority("P2");
-                  setDueDay(focusedDayIndex);
-                  setDueHour(18);
-                  setUrgent(false);
-                  setEnergyLevel("medium");
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                加入日程
-              </button>
-            </section>
-
-            <section className="rounded-2xl border border-[#e8ebf3] bg-white p-4 shadow-soft">
-              <div className="text-[14px] font-semibold text-slate-950">推荐空档</div>
-              <div className="mt-3 space-y-2">
-                {recommendedWindows.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-[12px] leading-5 text-slate-500">
-                    {focusedDayLabel} 已经比较满。可以把任务改为“本周处理”，或者使用自动排程腾出更好的专注窗口。
-                  </div>
-                ) : null}
-                {recommendedWindows.map((window) => (
-                  <button
-                    key={`${window.startHour}-${window.endHour}`}
-                    type="button"
-                    onClick={() => onSelectSuggestedSlot(window.startHour)}
-                    className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-left transition hover:border-indigo-200 hover:bg-indigo-50"
-                  >
-                    <div>
-                      <div className="text-[12px] font-medium text-slate-900">
-                        {formatTime(window.startHour)} - {formatTime(window.endHour)}
-                      </div>
-                      <div className="mt-1 text-[11px] text-slate-500">适合放短任务、恢复任务或新的专注块。</div>
-                    </div>
-                    <div className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-indigo-700">
-                      {window.duration} 小时
-                    </div>
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  className="w-full rounded-xl bg-[var(--color-btn-primary)] py-2.5 text-[13px] font-semibold text-white shadow-[0_2px_8px_rgba(138,136,184,0.30)] transition hover:bg-[var(--color-btn-primary-hover)]"
+                  onClick={() => {
+                    onAddTask({ title, durationHours, priority, dueDay, dueHour, urgent, energyLevel });
+                    setTitle(""); setDurationHours(1); setPriority("P2"); setDueDay(focusedDayIndex); setDueHour(18); setUrgent(false); setEnergyLevel("medium");
+                  }}
+                >
+                  <Plus className="mr-1.5 inline h-4 w-4" />
+                  加入日程
+                </button>
               </div>
             </section>
 
-            <section className="rounded-2xl border border-[#e8ebf3] bg-white p-4 shadow-soft">
-              <div className="text-[14px] font-semibold text-slate-950">{focusedDayLabel} 优先事项</div>
-              <div className="mt-3 space-y-4">
+            <section className="rounded-2xl border border-[var(--color-border-subtle)] bg-white p-4">
+              <div className="mb-2.5 text-[13px] font-semibold text-[var(--color-text-primary)]">{focusedDayLabel} 优先事项</div>
+              <div className="space-y-3">
                 {groupedTasks.length === 0 ? (
-                  <div className="text-[12px] text-slate-500">
-                    {focusedDayLabel} 暂无优先任务。可以直接点日历空白处，把新任务变成时间块。
+                  <div className="rounded-xl border border-dashed border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] px-3 py-4 text-[12px] text-[var(--color-text-muted)]">
+                    暂无优先任务。点击日历空白处可直接添加时间块。
                   </div>
-                ) : null}
-                {groupedTasks.map((group) => (
+                ) : groupedTasks.map((group) => (
                   <div key={group.level}>
-                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{group.label}</div>
-                    <div className="space-y-2">
+                    <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-muted)]">{group.label}</div>
+                    <div className="space-y-1.5">
                       {group.items.map((task) => (
-                        <div key={task.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:border-slate-300 hover:bg-white">
-                          <div className={`text-[12px] font-medium text-slate-900 ${task.status === "completed" ? "line-through opacity-60" : ""}`}>{task.title}</div>
-                          <div className="mt-2 flex items-center gap-2">
-                            <button type="button" className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950" onClick={() => onSelectTask(task.id)}>
-                              详情
-                            </button>
-                            <button type="button" className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700" onClick={() => onScheduleTask(task.id)}>
-                              重新安排
-                            </button>
-                            <button type="button" className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 transition hover:border-emerald-200 hover:text-emerald-700" onClick={() => onMarkDone(task.id)}>
-                              完成
-                            </button>
+                        <div key={task.id} className="group flex items-center justify-between gap-2 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] px-3 py-2 transition hover:border-[var(--color-border-default)] hover:bg-white">
+                          <div className={`min-w-0 flex-1 text-[12px] font-medium text-[var(--color-text-primary)] ${task.status === "completed" ? "line-through opacity-50" : ""}`}>
+                            <span className="truncate">{task.title}</span>
+                          </div>
+                          <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                            <button type="button" onClick={() => onScheduleTask(task.id)} className="rounded-lg border border-[var(--color-border-subtle)] bg-white px-2 py-1 text-[10px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]">安排</button>
+                            <button type="button" onClick={() => onMarkDone(task.id)} className="rounded-lg border border-[var(--color-border-subtle)] bg-white px-2 py-1 text-[10px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-event-focus)] hover:text-[var(--color-event-focus)]">完成</button>
                           </div>
                         </div>
                       ))}
@@ -584,276 +470,157 @@ export function RightTaskPanel({
               </div>
             </section>
 
-            <section className="rounded-2xl border border-[#e8ebf3] bg-white p-4 shadow-soft">
-              <div className="text-[14px] font-semibold text-slate-950">历史效率分析</div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                  <div className="text-[11px] text-slate-500">预估与实际</div>
-                  <div className="mt-1 text-[15px] font-semibold text-slate-950">
-                    {Math.max(allTasks.reduce((sum, task) => sum + task.estimatedMinutes, 0) - completedEvents.length * 30, 0)} / {allTasks.reduce((sum, task) => sum + task.estimatedMinutes, 0)}m
+            <section className="rounded-2xl border border-[var(--color-border-subtle)] bg-white p-4">
+              <div className="mb-2.5 text-[13px] font-semibold text-[var(--color-text-primary)]">可用空档</div>
+              <div className="space-y-1.5">
+                {recommendedWindows.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] px-3 py-3 text-[12px] text-[var(--color-text-muted)]">
+                    当天空档不足，可使用智能安排或调整任务时长。
                   </div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                  <div className="text-[11px] text-slate-500">专注评分</div>
-                  <div className="mt-1 text-[15px] font-semibold text-slate-950">{focusScore}</div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                  <div className="text-[11px] text-slate-500">中断次数</div>
-                  <div className="mt-1 text-[15px] font-semibold text-slate-950">{interruptionCount}</div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                  <div className="text-[11px] text-slate-500">最佳专注窗口</div>
-                  <div className="mt-1 text-[15px] font-semibold text-slate-950">09:00 - 10:30</div>
-                </div>
-              </div>
-              <div className="mt-3 text-[12px] leading-5 text-slate-500">
-                已完成 {completedEvents.length} 个事件，超时块 {overtimeEvents.length} 个。
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-[#e8ebf3] bg-white p-4 shadow-soft">
-              <div className="text-[14px] font-semibold text-slate-950">一键重新规划</div>
-              <div className="mt-2 text-[12px] leading-5 text-slate-500">
-                保留固定会议，只移动灵活任务、专注块和习惯块，适合演示动态规划效果。
-              </div>
-              <button
-                type="button"
-                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-[10px] bg-[#4f46e5] px-4 py-2.5 text-[13px] font-medium text-white shadow-soft transition hover:bg-[#4338ca]"
-                onClick={onAutoSchedule}
-              >
-                <Sparkles className="h-4 w-4" />
-                一键重新规划
-              </button>
-            </section>
-
-            <section className="rounded-2xl border border-[#e8ebf3] bg-white p-4 shadow-soft">
-              <div className="text-[14px] font-semibold text-slate-950">多方案模拟</div>
-              <div className="mt-3 space-y-2">
-                {[
-                  {
-                    key: "balanced" as const,
-                    title: "平衡方案",
-                    description: "兼顾会议、专注和截止日期。"
-                  },
-                  {
-                    key: "deep" as const,
-                    title: "深度工作方案",
-                    description: "优先保护长专注块。"
-                  },
-                  {
-                    key: "deadline" as const,
-                    title: "截止优先方案",
-                    description: "优先把 P1 / P2 任务往前推。"
-                  }
-                ].map((scenario) => (
-                  <div key={scenario.key} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                    <div className="text-[12px] font-semibold text-slate-900">{scenario.title}</div>
-                    <div className="mt-1 text-[11px] leading-5 text-slate-500">{scenario.description}</div>
-                    <div className="mt-3 flex gap-2">
-                      <button type="button" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700" onClick={() => onPreviewScenario(scenario.key)}>
-                        预览
-                      </button>
-                      <button type="button" className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[11px] font-medium text-indigo-700" onClick={() => onApplyScenario(scenario.key)}>
-                        应用
-                      </button>
+                ) : recommendedWindows.map((window) => (
+                  <button key={`${window.startHour}-${window.endHour}`} type="button" onClick={() => onSelectSuggestedSlot(window.startHour)} className="flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] px-3 py-2.5 text-left transition hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-lighter)]">
+                    <div>
+                      <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{formatTime(window.startHour)} - {formatTime(window.endHour)}</div>
+                      <div className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">{window.duration} 小时可用</div>
                     </div>
-                  </div>
+                    <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--color-primary)] shadow-sm">{window.duration}h</span>
+                  </button>
                 ))}
               </div>
             </section>
+
+            <section className="rounded-2xl border border-[var(--color-border-subtle)] bg-white p-4">
+              <div className="mb-2.5 text-[13px] font-semibold text-[var(--color-text-primary)]">今日概览</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] px-3 py-2.5">
+                  <div className="text-[10px] text-[var(--color-text-muted)]">专注评分</div>
+                  <div className="mt-1 text-[18px] font-semibold text-[var(--color-event-focus)]">{focusScore}</div>
+                </div>
+                <div className="rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] px-3 py-2.5">
+                  <div className="text-[10px] text-[var(--color-text-muted)]">已完成</div>
+                  <div className="mt-1 text-[18px] font-semibold text-[var(--color-text-primary)]">{completedEvents.length}</div>
+                </div>
+              </div>
+              {overtimeEvents.length > 0 && (
+                <div className="mt-2 rounded-xl border border-[var(--color-accent-rose)]/20 bg-[var(--color-accent-rose)]/5 px-3 py-2 text-[11px] text-[var(--color-accent-rose)]">
+                  有 {overtimeEvents.length} 个时间块超时，请留意。
+                </div>
+              )}
+            </section>
+
+            <button
+              type="button"
+              onClick={onAutoSchedule}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--color-primary)]/30 bg-[var(--color-primary-lighter)] py-3 text-[13px] font-semibold text-[var(--color-primary-text)] shadow-[0_2px_8px_rgba(138,136,184,0.20)] transition hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)]"
+            >
+              <Sparkles className="h-4 w-4" />
+              智能安排
+            </button>
           </>
         ) : null}
 
-        {panelView === "details" ? (
-          <section className="rounded-2xl border border-[#e8ebf3] bg-white p-4 shadow-soft">
-            <div className="text-[14px] font-semibold text-slate-950">当前事件</div>
-            {selectedEvent ? (
-              <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                  {selectedEvent.type === "meeting" ? "固定会议" : selectedEvent.aiGenerated ? "AI 调整块" : "时间块详情"}
-                </div>
-                <div className="mt-1 text-[16px] font-semibold text-slate-950">{selectedEvent.title}</div>
-                <div className="mt-2 text-[12px] text-slate-500">
-                  {focusedDayLabel} {formatTime(selectedEvent.startHour)} · {selectedEvent.duration} 小时
-                </div>
-                <div className="mt-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] text-slate-600">
-                  {priorityLabel(selectedEvent.priority)} · {energyLabel(selectedEvent.energyLevel)} ·{" "}
-                  {selectedEvent.fixed ? "固定事件" : "可移动"}
-                </div>
-                {linkedTask ? (
-                  <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-[12px] text-indigo-700">
-                    关联任务剩余 {linkedTask.remainingMinutes} 分钟，状态：{linkedTask.status}
-                  </div>
-                ) : null}
-                <div className="mt-4 flex gap-2">
-                  <button type="button" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950" onClick={() => onSelectTask(selectedEvent.id)}>
-                    打开抽屉
-                  </button>
-                  <button type="button" className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[11px] font-medium text-indigo-700 transition hover:bg-indigo-100" onClick={() => onScheduleTask(selectedEvent.id)}>
-                    重新安排
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-3 text-[12px] text-slate-500">在日历里点一个任务块，这里会显示它的动态重排上下文。</div>
-            )}
-          </section>
-        ) : null}
-
         {panelView === "ai" ? (
-          <section className="rounded-2xl border border-[#e8ebf3] bg-white p-4 shadow-soft">
-            <div className="flex items-center gap-2 text-[14px] font-semibold text-slate-950">
-              <Sparkles className="h-4 w-4 text-indigo-600" />
-              <span>AI 重排日志</span>
+          <section className="space-y-3">
+            <div className="flex items-center gap-2 text-[13px] font-semibold text-[var(--color-text-primary)]">
+              <Sparkles className="h-4 w-4 text-[var(--color-primary)]" />
+              <span>日程助手</span>
             </div>
+
             {giveUpFeedback ? (
-              <div className="mt-3 rounded-[24px] border border-amber-200 bg-[linear-gradient(180deg,#fff7ed_0%,#fffbeb_100%)] px-4 py-4 shadow-[0_12px_30px_rgba(245,158,11,0.12)]">
-                <div className="flex items-start justify-between gap-3">
+              <div className={`rounded-2xl border p-4 ${giveUpStepToneClasses.focus}`}>
+                <div className="flex items-start justify-between gap-2">
                   <div>
-                    <div className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-900">
-                      恢复方案已应用
-                    </div>
-                    <div className="mt-2 text-[18px] font-semibold leading-6 text-slate-950">“{giveUpFeedback.sourceTitle}”已经被拆成更容易继续的节奏</div>
-                    <div className="mt-2 text-[12px] leading-5 text-amber-900">
-                      这次展示的是点击后真实落进日历里的结果，不是点击前预演。你现在看到的是系统已经执行完的恢复方案。
-                    </div>
+                    <div className="inline-flex rounded-full bg-[var(--color-accent-amber)]/15 px-2.5 py-1 text-[10px] font-semibold text-[var(--color-accent-amber)]">恢复方案已应用</div>
+                    <div className="mt-2 text-[14px] font-semibold text-[var(--color-text-primary)]">"{giveUpFeedback.sourceTitle}" 已调整为更易完成的节奏</div>
                   </div>
-                  <div className="min-w-[82px] rounded-2xl border border-amber-100 bg-white/80 px-3 py-2 text-right">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">{giveUpFeedback.dayLabel}</div>
-                    <div className="mt-1 text-[22px] font-semibold leading-none text-slate-950">{giveUpFeedback.affectedTaskCount}</div>
-                    <div className="mt-1 text-[11px] text-slate-500">个块联动</div>
+                  <div className="shrink-0 rounded-2xl border border-[var(--color-border-subtle)] bg-white px-3 py-2 text-right shadow-sm">
+                    <div className="text-[10px] text-[var(--color-text-muted)]">{giveUpFeedback.dayLabel}</div>
+                    <div className="text-[20px] font-bold text-[var(--color-text-primary)]">{giveUpFeedback.affectedTaskCount}</div>
+                    <div className="text-[10px] text-[var(--color-text-muted)]">个块联动</div>
                   </div>
                 </div>
-
-                <div className="mt-4 rounded-2xl border border-amber-100 bg-white/85 p-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">原计划</div>
-                  <div className="mt-1 text-[14px] font-semibold text-slate-950">
-                    {formatTime(giveUpFeedback.originalStartHour)} - {formatTime(giveUpFeedback.originalEndHour)} {giveUpFeedback.sourceTitle}
+                <div className="mt-3 space-y-2">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+                    点击后实际变成
                   </div>
-
-                  <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">点击后实际变成</div>
-                  <div className="mt-3 space-y-2">
-                    {giveUpFeedback.steps.map((step) => (
-                      <div key={step.id} className={`rounded-xl border p-3 ${giveUpStepToneClasses[step.tone]}`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="text-[11px] font-semibold text-slate-500">{step.label}</div>
-                            <div className="mt-1 text-[13px] font-semibold text-slate-950">{step.title}</div>
-                            <div className="mt-1 text-[11px] leading-5 text-slate-600">{step.detail}</div>
-                          </div>
-                          <div className="shrink-0 rounded-lg bg-white/90 px-2 py-1 text-[11px] font-semibold text-slate-700">
-                            {formatTime(step.startHour)} - {step.endHour ? formatTime(step.endHour) : "之后"}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <div className="rounded-xl border border-amber-100 bg-white/80 px-3 py-3">
-                    <div className="text-[11px] text-slate-500">连续高强度</div>
-                    <div className="mt-1 text-[15px] font-semibold text-slate-950">
-                      {giveUpFeedback.originalFocusMinutes} → {giveUpFeedback.immediateFocusMinutes} 分钟
+                  {giveUpFeedback.steps.map((step) => (
+                    <div key={step.id} className={`rounded-xl border p-2.5 ${giveUpStepToneClasses[step.tone]}`}>
+                      <div className="text-[10px] font-medium text-[var(--color-text-muted)]">{step.label}</div>
+                      <div className="mt-0.5 text-[12px] font-semibold text-[var(--color-text-primary)]">{step.title}</div>
+                      <div className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]">{step.detail}</div>
                     </div>
+                  ))}
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-[var(--color-border-subtle)] bg-white px-2.5 py-2">
+                    <div className="text-[10px] text-[var(--color-text-muted)]">高强度</div>
+                    <div className="text-[13px] font-semibold text-[var(--color-text-primary)]">{giveUpFeedback.originalFocusMinutes}→{giveUpFeedback.immediateFocusMinutes}m</div>
                   </div>
-                  <div className="rounded-xl border border-amber-100 bg-white/80 px-3 py-3">
-                    <div className="text-[11px] text-slate-500">恢复时间</div>
-                    <div className="mt-1 text-[15px] font-semibold text-slate-950">{giveUpFeedback.recoveryMinutes} 分钟</div>
-                  </div>
-                  <div className="rounded-xl border border-amber-100 bg-white/80 px-3 py-3">
-                    <div className="text-[11px] text-slate-500">轻量任务</div>
-                    <div className="mt-1 text-[15px] font-semibold text-slate-950">{giveUpFeedback.lightTaskMinutes} 分钟</div>
-                  </div>
-                  <div className="rounded-xl border border-amber-100 bg-white/80 px-3 py-3">
-                    <div className="text-[11px] text-slate-500">续做开始</div>
-                    <div className="mt-1 text-[15px] font-semibold text-slate-950">{formatTime(giveUpFeedback.resumedAtHour)}</div>
+                  <div className="rounded-xl border border-[var(--color-border-subtle)] bg-white px-2.5 py-2">
+                    <div className="text-[10px] text-[var(--color-text-muted)]">恢复时间</div>
+                    <div className="text-[13px] font-semibold text-[var(--color-text-primary)]">{giveUpFeedback.recoveryMinutes} 分钟</div>
                   </div>
                 </div>
-
-                {giveUpFeedback.changes.length > 0 ? (
-                  <div className="mt-4 rounded-2xl border border-amber-100 bg-white/85 px-3 py-3">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">系统这次做了什么</div>
-                    <div className="mt-2 space-y-1.5 text-[11px] leading-5 text-slate-700">
-                      {giveUpFeedback.changes.map((change) => (
-                        <div key={change}>- {change}</div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                {giveUpFeedback.warnings.length > 0 ? (
-                  <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-[12px] leading-5 text-amber-900">
-                    {giveUpFeedback.warnings.map((warning) => (
-                      <div key={warning}>- {warning}</div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ) : latestGiveUpLog ? (
-              <div className="mt-3 rounded-2xl border border-amber-200 bg-[linear-gradient(180deg,#fff7ed_0%,#fffbeb_100%)] px-4 py-4 shadow-[0_8px_24px_rgba(245,158,11,0.10)]">
-                <div className="text-[13px] font-semibold text-amber-950">已触发“干不下去了”模式</div>
-                <div className="mt-2 text-[12px] leading-5 text-amber-900">
-                  系统已经按疲惫状态重排：先停下高强度任务，插入恢复时间，再切到更轻量的任务，最后把续做块后移。
-                </div>
-                {latestGiveUpLog.changes.length > 0 ? (
-                  <div className="mt-3 rounded-xl border border-amber-100 bg-white/80 px-3 py-3 text-[11px] text-amber-900">
-                    {latestGiveUpLog.changes.slice(0, 4).map((change) => (
-                      <div key={change}>- {change}</div>
-                    ))}
-                  </div>
-                ) : null}
               </div>
             ) : null}
-            {latestSummary ? <div className="mt-3 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-[12px] leading-5 text-sky-800">{latestSummary}</div> : null}
-            {latestWarnings.length > 0 ? (
-              <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-[12px] leading-5 text-amber-800">
-                {latestWarnings.map((warning) => (
-                  <div key={warning}>- {warning}</div>
+
+            {latestSummary && <div className="rounded-xl border border-[var(--color-event-task)]/20 bg-[var(--color-event-task-light)] px-3 py-2 text-[12px] text-[var(--color-event-task)]">{latestSummary}</div>}
+            {latestWarnings.length > 0 && <div className="rounded-xl border border-[var(--color-accent-amber)]/30 bg-[var(--color-accent-amber)]/8 px-3 py-2 text-[12px] text-[var(--color-accent-amber)]">{latestWarnings.map((w) => <div key={w}>· {w}</div>)}</div>}
+            {unscheduledTasks.length > 0 && <div className="rounded-xl border border-[var(--color-accent-rose)]/20 bg-[var(--color-accent-rose)]/5 px-3 py-2 text-[12px] text-[var(--color-accent-rose)]">以下任务仍未安排：{unscheduledTasks.map((t) => t.title).join("、")}</div>}
+
+            {aiLogs.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-[12px] font-medium text-[var(--color-text-muted)]">最近记录</div>
+                {visibleLogs.map((log) => {
+                  const accent = getLogAccent(log.action);
+                  return (
+                    <div key={log.id} className={`rounded-xl border p-3 ${accent.bg} ${accent.border}`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${accent.dot}/20 ${accent.text}`}>
+                          {getLogIcon(log.action)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[12px] font-semibold text-[var(--color-text-primary)]">{log.action}</div>
+                          <div className="text-[11px] text-[var(--color-text-secondary)]">{log.summary}</div>
+                        </div>
+                        <div className="shrink-0 text-[10px] text-[var(--color-text-muted)]">{log.time}</div>
+                      </div>
+                      {log.changes.length > 0 && (
+                        <div className="mt-2 rounded-lg bg-white/80 px-2.5 py-1.5 text-[11px] text-[var(--color-text-secondary)]">
+                          {log.changes.map((c) => <div key={c}>· {c}</div>)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {!showAllLogs && aiLogs.length > 3 && (
+                  <button type="button" onClick={() => setShowAllLogs(true)} className="w-full rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] py-2 text-[12px] text-[var(--color-text-muted)] transition hover:border-[var(--color-border-default)] hover:text-[var(--color-text-secondary)]">
+                    查看全部 {aiLogs.length} 条记录
+                  </button>
+                )}
+                {showAllLogs && aiLogs.length > 3 && (
+                  <button type="button" onClick={() => setShowAllLogs(false)} className="w-full rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] py-2 text-[12px] text-[var(--color-text-muted)] transition hover:border-[var(--color-border-default)] hover:text-[var(--color-text-secondary)]">
+                    收起记录
+                  </button>
+                )}
+              </div>
+            )}
+
+            {suggestions.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-[12px] font-medium text-[var(--color-text-muted)]">智能建议</div>
+                {suggestions.map((suggestion) => (
+                  <div key={suggestion.id} className="rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary-lighter)] p-3">
+                    <div className="text-[12px] font-semibold text-[var(--color-primary-text)]">{suggestion.title}</div>
+                    <div className="mt-1 text-[11px] text-[var(--color-text-secondary)]">{suggestion.description}</div>
+                    <div className="mt-2 flex gap-2">
+                      <button type="button" onClick={() => onApplySuggestion(suggestion)} className="rounded-lg bg-[var(--color-btn-primary)] px-3 py-1.5 text-[11px] font-medium text-white transition hover:bg-[var(--color-btn-primary-hover)]">应用</button>
+                      <button type="button" onClick={() => onDismissSuggestion(suggestion.id)} className="rounded-lg border border-[var(--color-border-subtle)] bg-white px-3 py-1.5 text-[11px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-border-default)] hover:text-[var(--color-text-secondary)]">忽略</button>
+                    </div>
+                  </div>
                 ))}
               </div>
-            ) : null}
-            {unscheduledTasks.length > 0 ? (
-              <div className="mt-3 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-[12px] leading-5 text-rose-800">
-                今日空间不足，以下任务仍未安排：{unscheduledTasks.map((task) => task.title).join("、")}
-              </div>
-            ) : null}
-
-            <div className="mt-3 space-y-3">
-              {aiLogs.map((log) => (
-                <div key={log.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-[12px] font-semibold text-slate-900">{log.action}</div>
-                    <div className="text-[11px] text-slate-400">{log.time}</div>
-                  </div>
-                  <div className="mt-1 text-[12px] leading-5 text-slate-600">{log.summary}</div>
-                  {log.changes.length > 0 ? (
-                    <div className="mt-2 rounded-lg bg-white px-3 py-2 text-[11px] text-slate-600">
-                      {log.changes.map((change) => (
-                        <div key={change}>- {change}</div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {suggestions.map((suggestion) => (
-                <div key={suggestion.id} className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
-                  <div className="text-[12px] font-semibold text-indigo-900">{suggestion.title}</div>
-                  <div className="mt-1 text-[12px] leading-5 text-slate-600">{suggestion.description}</div>
-                  <div className="mt-3 flex gap-2">
-                    <button type="button" className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-medium text-white transition hover:bg-indigo-700" onClick={() => onApplySuggestion(suggestion)}>
-                      应用
-                    </button>
-                    <button type="button" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900" onClick={() => onDismissSuggestion(suggestion.id)}>
-                      忽略
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            )}
           </section>
         ) : null}
       </div>

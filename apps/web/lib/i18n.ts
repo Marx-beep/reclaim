@@ -1,4 +1,4 @@
-﻿// Centralized copy dictionary reserved for i18n expansion.
+// Centralized copy dictionary reserved for i18n expansion.
 export const i18n = {
   "zh-CN": {
     nav: {
@@ -69,11 +69,11 @@ export const i18n = {
       connectOutlook: "连接 Outlook",
       timePolicy: "时间策略",
       timezone: "时区",
-      workdayStart: "工作开始时间",
-      workdayEnd: "工作结束时间",
-      softLockLeadHours: "软锁提前小时",
-      hardLockLeadHours: "硬锁提前小时",
-      savePolicy: "保存策略"
+      workdayStart: "工作日开始",
+      workdayEnd: "工作日结束",
+      softLockLeadHours: "软锁提前（小时）",
+      hardLockLeadHours: "硬锁提前（小时）",
+      savePolicy: "保存设置"
     },
     analytics: {
       title: "时间分析",
@@ -90,28 +90,28 @@ export const i18n = {
       meetingsTitle: "会议概览",
       workLifeTitle: "工作-生活平衡",
       insightsTitle: "优化建议",
-      personalHours: "个人时间（小时）",
-      overtimeHours: "加班（小时）",
-      vacationHours: "PTO（小时）"
+      personalHours: "个人时间",
+      overtimeHours: "加班时间",
+      vacationHours: "休假时间"
     },
     links: {
       title: "预约链接",
       create: "创建链接",
       slug: "访问路径",
-      duration: "会议时长（分钟）",
-      notice: "最短通知（分钟）",
-      minHours: "最早预约（小时）",
-      maxDays: "最远预约（天）",
+      duration: "时长（分钟）",
+      notice: "提前通知（分钟）",
+      minHours: "最早可约（小时）",
+      maxDays: "最远可约（天）",
       activeLinks: "现有链接",
       availability: "可预约时段",
-      linkLabel: "链接",
-      from: "开始",
-      to: "结束",
+      linkLabel: "选择链接",
+      from: "起始",
+      to: "截止",
       loadAvailability: "加载可用时段",
-      noLinks: "暂无链接，请先创建。",
-      noSlots: "所选窗口暂无可预约时段。",
-      bookFirst: "预约该时段（测试）",
-      booked: "已创建会议与缓冲时间。"
+      noLinks: "暂无链接，请先创建一个",
+      noSlots: "当前窗口暂无可预约时段",
+      bookFirst: "预约（测试）",
+      booked: "已创建会议与缓冲时间"
     },
     admin: {
       title: "运维控制台",

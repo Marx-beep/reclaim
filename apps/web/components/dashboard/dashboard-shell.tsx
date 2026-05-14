@@ -20,8 +20,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <SidebarNav />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <TopBar onSync={syncCalendars} />
-          <main className="min-h-0 flex-1 overflow-y-auto">
-            <div className="min-h-full px-4 py-5">{children}</div>
+          <main className="min-h-0 flex-1 overflow-hidden">
+            <div className="flex h-full flex-col px-4 py-5">{children}</div>
           </main>
         </div>
       </div>

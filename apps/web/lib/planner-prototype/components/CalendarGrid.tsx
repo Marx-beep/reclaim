@@ -1,348 +1,44 @@
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  pointerWithin,
-  useDraggable,
-  useDroppable,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragMoveEvent,
-  type DragStartEvent
-} from "@dnd-kit/core";
-import { isSameDay } from "date-fns";
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import type { CalendarEvent, NavigationSection, ReplanChangeType } from "../types/calendar";
-import {
-  DISPLAY_DAY_END,
-  DISPLAY_DAY_START,
-  HOUR_HEIGHT,
-  WORK_DAY_END,
-  WORK_DAY_START,
-  buildHeaderDays,
-  clampStartHour,
-  hasConflict,
-  snapToQuarterHour
-} from "../utils/calendarUtils";
+import { addDays, format, isSameDay } from "date-fns";
+import { zhCN } from "date-fns/locale";
 import { CalendarEventBlock } from "./CalendarEventBlock";
+import { TimeAllocationBar } from "./TimeAllocationBar";
+import { useEffect, useRef, useState } from "react";
+import type { CalendarEvent, ReplanChangeType } from "../types/calendar";
+
+const HOUR_HEIGHT = 64;
+const SLOT_COUNT = 24;
+const HOURS = Array.from({ length: SLOT_COUNT }, (_, i) => i);
+const TIME_AXIS_WIDTH = 48;
+
+function formatHour(hour: number) {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+
+function snapToGridSlot(hour: number): number {
+  return Math.floor(hour * 4) / 4;
+}
+
+function ceilToGridSlot(hour: number): number {
+  return Math.ceil(hour * 4) / 4;
+}
 
 interface CalendarGridProps {
   events: CalendarEvent[];
   weekStart: Date;
   isOptimizing: boolean;
-  activeSection: NavigationSection;
+  activeSection: string;
   focusedDayIndex: number;
   selectedSlot: { day: number; startHour: number } | null;
   recentChangeMap: Record<string, ReplanChangeType>;
   onFocusedDayChange: (day: number) => void;
   onEventSelect: (eventId: string) => void;
   onEmptySlotSelect: (day: number, startHour: number) => void;
-  onEventMove: (eventId: string, day: number, startHour: number) => void;
-  onEventResize: (eventId: string, nextDuration: number) => void;
+  onEventMove: (eventId: string, newDay: number, newStartHour: number) => void;
+  onEventResize: (eventId: string, newDuration: number) => void;
   onMarkDone: (eventId: string) => void;
   onReschedule: (eventId: string) => void;
   onCannotContinue: (eventId: string) => void;
   onMoreAction: (eventId: string) => void;
-}
-
-interface EventLayout {
-  width: number;
-  left: number;
-}
-
-interface PreviewSlot {
-  day: number;
-  startHour: number;
-  duration: number;
-  mode: "move" | "resize";
-}
-
-interface ResizeSession {
-  eventId: string;
-  startY: number;
-  baseDuration: number;
-  startHour: number;
-  day: number;
-}
-
-const HOURS = Array.from({ length: DISPLAY_DAY_END - DISPLAY_DAY_START }, (_, index) => DISPLAY_DAY_START + index);
-const TOTAL_HEIGHT = HOUR_HEIGHT * HOURS.length;
-const TIME_COLUMN_WIDTH = 76;
-
-function formatHourLabel(hour: number) {
-  const normalizedHour = ((hour % 24) + 24) % 24;
-  const suffix = normalizedHour >= 12 ? "pm" : "am";
-  const normalized = normalizedHour % 12 === 0 ? 12 : normalizedHour % 12;
-  return `${normalized}${suffix}`;
-}
-
-function getCurrentTimeHour() {
-  const now = new Date();
-  return Math.min(Math.max(now.getHours() + now.getMinutes() / 60, DISPLAY_DAY_START), DISPLAY_DAY_END);
-}
-
-function getHourTop(hour: number) {
-  return (hour - DISPLAY_DAY_START) * HOUR_HEIGHT;
-}
-
-function isWorkHour(hour: number) {
-  return hour >= WORK_DAY_START && hour < WORK_DAY_END;
-}
-
-function buildDayLayouts(events: CalendarEvent[]) {
-  const layouts = new Map<string, EventLayout>();
-  const sorted = [...events].sort((a, b) => a.startHour - b.startHour || b.duration - a.duration);
-  const laneEnds: number[] = [];
-  const laneMap = new Map<string, number>();
-
-  for (const event of sorted) {
-    let lane = laneEnds.findIndex((endHour) => endHour <= event.startHour);
-    if (lane === -1) {
-      lane = laneEnds.length;
-      laneEnds.push(event.startHour + event.duration);
-    } else {
-      laneEnds[lane] = event.startHour + event.duration;
-    }
-    laneMap.set(event.id, lane);
-  }
-
-  for (const event of sorted) {
-    const overlapCount = Math.min(
-      3,
-      Math.max(1, sorted.filter((candidate) => candidate.id !== event.id && hasConflict(event, candidate)).length + 1)
-    );
-    const width = 100 / overlapCount;
-    const lane = laneMap.get(event.id) ?? 0;
-    const normalizedLane = Math.min(lane, overlapCount - 1);
-
-    layouts.set(event.id, {
-      width: overlapCount === 1 ? 100 : width,
-      left: overlapCount === 1 ? 0 : normalizedLane * width
-    });
-  }
-
-  return layouts;
-}
-
-function shouldMuteEvent(activeSection: NavigationSection, event: CalendarEvent) {
-  if (activeSection === "Planner") {
-    return false;
-  }
-  if (activeSection === "Tasks") {
-    return !["task", "focus", "habit"].includes(event.type);
-  }
-  if (activeSection === "Habits") {
-    return event.type !== "habit";
-  }
-  if (activeSection === "Focus") {
-    return event.type !== "focus";
-  }
-  if (activeSection === "Meetings") {
-    return event.type !== "meeting";
-  }
-  if (activeSection === "Links") {
-    return !["task", "meeting"].includes(event.type);
-  }
-  if (activeSection === "Sync") {
-    return !event.fixed;
-  }
-  if (activeSection === "Analytics") {
-    return !["task", "focus", "meeting", "habit"].includes(event.type);
-  }
-  if (activeSection === "Settings") {
-    return event.type !== "buffer";
-  }
-  return false;
-}
-
-function EventCard({
-  event,
-  layout,
-  isOptimizing,
-  isMuted,
-  changeType,
-  onSelect,
-  onMarkDone,
-  onReschedule,
-  onCannotContinue,
-  onResizeStart,
-  onMoreAction
-}: {
-  event: CalendarEvent;
-  layout: EventLayout;
-  isOptimizing: boolean;
-  isMuted: boolean;
-  changeType?: ReplanChangeType;
-  onSelect: () => void;
-  onMarkDone: () => void;
-  onReschedule: () => void;
-  onCannotContinue: () => void;
-  onResizeStart: (pointerEvent: ReactPointerEvent<HTMLButtonElement>) => void;
-  onMoreAction: () => void;
-}) {
-  const draggable = useDraggable({
-    id: event.id,
-    disabled: event.fixed || !event.movable || event.status === "unscheduled"
-  });
-
-  return (
-    <div
-      ref={draggable.setNodeRef}
-      className="absolute px-1"
-      style={{
-        top: getHourTop(event.startHour),
-        height: event.duration * HOUR_HEIGHT,
-        left: `${layout.left}%`,
-        width: `calc(${layout.width}% - 2px)`,
-        transform: draggable.transform ? `translate3d(${draggable.transform.x}px, ${draggable.transform.y}px, 0)` : undefined,
-        zIndex: draggable.isDragging ? 40 : 10
-      }}
-    >
-      <CalendarEventBlock
-        event={event}
-        className="h-full"
-        isDragging={draggable.isDragging}
-        isOptimizing={isOptimizing}
-        isMuted={isMuted}
-        changeType={changeType}
-        dragAttributes={draggable.attributes}
-        dragListeners={draggable.listeners}
-        onClick={onSelect}
-        onMarkDone={onMarkDone}
-        onReschedule={onReschedule}
-        onCannotContinue={onCannotContinue}
-        onResizeStart={onResizeStart}
-        onMoreAction={onMoreAction}
-      />
-    </div>
-  );
-}
-
-function DayColumn({
-  dayIndex,
-  events,
-  isOptimizing,
-  isToday,
-  isFocusedDay,
-  showCurrentTimeLine,
-  selectedSlot,
-  previewSlot,
-  activeSection,
-  recentChangeMap,
-  onEventSelect,
-  onEmptySlotSelect,
-  onEventMarkDone,
-  onEventReschedule,
-  onEventCannotContinue,
-  onEventResizeStart,
-  onEventMoreAction
-}: {
-  dayIndex: number;
-  events: CalendarEvent[];
-  isOptimizing: boolean;
-  isToday: boolean;
-  isFocusedDay: boolean;
-  showCurrentTimeLine: boolean;
-  selectedSlot: { day: number; startHour: number } | null;
-  previewSlot: PreviewSlot | null;
-  activeSection: NavigationSection;
-  recentChangeMap: Record<string, ReplanChangeType>;
-  onEventSelect: (eventId: string) => void;
-  onEmptySlotSelect: (day: number, startHour: number) => void;
-  onEventMarkDone: (eventId: string) => void;
-  onEventReschedule: (eventId: string) => void;
-  onEventCannotContinue: (eventId: string) => void;
-  onEventResizeStart: (event: CalendarEvent, pointerEvent: ReactPointerEvent<HTMLButtonElement>) => void;
-  onEventMoreAction: (eventId: string) => void;
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id: `day-${dayIndex}` });
-  const layouts = useMemo(() => buildDayLayouts(events), [events]);
-  const currentTimeHour = getCurrentTimeHour();
-
-  return (
-    <div
-      ref={setNodeRef}
-      onClick={(clickEvent) => {
-        const target = clickEvent.target as HTMLElement;
-        if (target.closest("[data-event-block='true']")) {
-          return;
-        }
-        const rect = clickEvent.currentTarget.getBoundingClientRect();
-        const offsetY = clickEvent.clientY - rect.top;
-        const clickedHour = snapToQuarterHour(DISPLAY_DAY_START + offsetY / HOUR_HEIGHT);
-        if (clickedHour < WORK_DAY_START || clickedHour > WORK_DAY_END - 1) {
-          return;
-        }
-        const nextHour = clampStartHour(clickedHour, 1);
-        onEmptySlotSelect(dayIndex, nextHour);
-      }}
-      className={`relative border-l border-[#edf0f5] ${
-        dayIndex === 0 || dayIndex === 6 ? "bg-[#f7f8fb]" : "bg-white"
-      } ${isOver ? "bg-sky-50/45" : ""} ${isFocusedDay ? "ring-1 ring-inset ring-sky-200" : ""}`}
-      style={{ height: TOTAL_HEIGHT }}
-    >
-      {HOURS.map((hour) => (
-        <div
-          key={hour}
-          className={`h-[56px] border-t border-[#edf0f5] ${isWorkHour(hour) ? "bg-white/92" : "bg-[#f8fafc]"}`}
-        />
-      ))}
-
-      {showCurrentTimeLine ? (
-        <div className="pointer-events-none absolute left-0 right-0 z-20" style={{ top: getHourTop(currentTimeHour) }}>
-          <div className="relative h-px bg-rose-500">
-            <span className="absolute -left-1.5 -top-1.5 h-3 w-3 rounded-full border-2 border-white bg-rose-500" />
-          </div>
-        </div>
-      ) : null}
-
-      {selectedSlot && selectedSlot.day === dayIndex ? (
-        <div
-          className="pointer-events-none absolute left-1 right-1 z-[5] rounded-xl border border-sky-300 bg-sky-100/80 shadow-[0_8px_18px_rgba(56,189,248,0.10)]"
-          style={{
-            top: getHourTop(selectedSlot.startHour) + 4,
-            height: HOUR_HEIGHT - 8
-          }}
-        >
-          <div className="px-3 py-2 text-[11px] font-medium text-sky-700">已选时间段</div>
-        </div>
-      ) : null}
-
-      {previewSlot && previewSlot.day === dayIndex ? (
-        <div
-          className="pointer-events-none absolute left-1 right-1 z-[6] rounded-xl border border-dashed border-sky-400 bg-sky-100/60"
-          style={{
-            top: getHourTop(previewSlot.startHour) + 4,
-            height: previewSlot.duration * HOUR_HEIGHT - 8
-          }}
-        >
-          <div className="px-3 py-2 text-[11px] font-medium text-sky-700">
-            {previewSlot.mode === "resize" ? "松手后调整时长" : "松手后移动到这里"}
-          </div>
-        </div>
-      ) : null}
-
-      {events.map((event) => (
-        <EventCard
-          key={event.id}
-          event={event}
-          layout={layouts.get(event.id) ?? { width: 100, left: 0 }}
-          isOptimizing={isOptimizing}
-          isMuted={shouldMuteEvent(activeSection, event)}
-          changeType={recentChangeMap[event.id]}
-          onSelect={() => onEventSelect(event.id)}
-          onMarkDone={() => onEventMarkDone(event.id)}
-          onReschedule={() => onEventReschedule(event.id)}
-          onCannotContinue={() => onEventCannotContinue(event.id)}
-          onResizeStart={(pointerEvent) => onEventResizeStart(event, pointerEvent)}
-          onMoreAction={() => onEventMoreAction(event.id)}
-        />
-      ))}
-
-      {isToday ? <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-500/0 via-sky-500/40 to-sky-500/0" /> : null}
-    </div>
-  );
 }
 
 export function CalendarGrid({
@@ -363,258 +59,279 @@ export function CalendarGrid({
   onCannotContinue,
   onMoreAction
 }: CalendarGridProps) {
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [previewSlot, setPreviewSlot] = useState<PreviewSlot | null>(null);
-  const [resizeSession, setResizeSession] = useState<ResizeSession | null>(null);
-  const scrollShellRef = useRef<HTMLDivElement | null>(null);
-  const hasInitializedScrollRef = useRef(false);
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 6 }
-    })
-  );
-  const headerDays = useMemo(() => buildHeaderDays(weekStart), [weekStart]);
-  const activeEvent = activeId ? events.find((event) => event.id === activeId) ?? null : null;
-  const now = new Date();
-  const todayColumnIndex = headerDays.findIndex((day) => isSameDay(day.date, now));
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [dragState, setDragState] = useState<{ eventId: string; type: "move" | "resize"; startDay: number; startHour: number } | null>(null);
+  const [dragPreview, setDragPreview] = useState<{ day: number; hour: number; duration?: number } | null>(null);
 
-  const eventsByDay = useMemo(
-    () =>
-      Array.from({ length: 7 }, (_, dayIndex) =>
-        events.filter((event) => event.day === dayIndex).sort((a, b) => a.startHour - b.startHour || a.duration - b.duration)
-      ),
-    [events]
-  );
+  const today = new Date();
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  const dayLoads = useMemo(
-    () =>
-      eventsByDay.map((dayEvents) =>
-        dayEvents
-          .filter((event) => event.status !== "completed" && event.status !== "unscheduled")
-          .reduce((sum, event) => sum + event.duration, 0)
-      ),
-    [eventsByDay]
-  );
+  const dayEventMap: Record<number, CalendarEvent[]> = {};
+  for (const event of events) {
+    if (event.status === "completed" || event.status === "unscheduled") continue;
+    if (!dayEventMap[event.day]) dayEventMap[event.day] = [];
+    dayEventMap[event.day].push(event);
+  }
+
+  const totalMinutes = events
+    .filter((e) => e.status !== "unscheduled")
+    .reduce((sum, e) => sum + e.duration * 60, 0);
+
+  const categoryMinutes: Record<string, number> = {};
+  for (const event of events) {
+    if (event.status === "unscheduled") continue;
+    const key = event.type;
+    categoryMinutes[key] = (categoryMinutes[key] ?? 0) + event.duration * 60;
+  }
+
+  const getSlotY = (hour: number) => hour * HOUR_HEIGHT;
+  const getSlotHour = (y: number) => y / HOUR_HEIGHT;
 
   useEffect(() => {
-    if (hasInitializedScrollRef.current) {
-      return;
+    setSelectedEventId(null);
+  }, [events]);
+
+  const handleGridMouseDown = (day: number, hour: number) => {
+    const eventAtSlot = dayEventMap[day]?.find((e) => {
+      const eventEnd = e.startHour + e.duration;
+      return hour >= e.startHour && hour < eventEnd;
+    });
+    if (eventAtSlot) {
+      setSelectedEventId(eventAtSlot.id);
+      onEventSelect(eventAtSlot.id);
+    } else {
+      setSelectedEventId(null);
+      onEventSelect("");
+      onEmptySlotSelect(day, hour);
     }
+  };
 
-    const scrollShell = scrollShellRef.current;
-    if (!scrollShell) {
-      return;
-    }
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragState || !scrollRef.current) return;
+    const rect = scrollRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left - TIME_AXIS_WIDTH;
+    const y = e.clientY - rect.top + scrollRef.current.scrollTop;
+    if (x < 0) return;
+    const day = Math.floor((x / (rect.width - TIME_AXIS_WIDTH)) * 7);
+    const hour = getSlotHour(y);
+    const snappedHour = Math.round(hour * 4) / 4;
+    setDragPreview({ day: Math.min(Math.max(day, 0), 6), hour: snappedHour });
+  };
 
-    scrollShell.scrollTop = Math.max(getHourTop(WORK_DAY_START) - HOUR_HEIGHT * 0.75, 0);
-    hasInitializedScrollRef.current = true;
-  }, []);
-
-  useEffect(() => {
-    if (!resizeSession) {
-      return;
-    }
-
-    const handlePointerMove = (pointerEvent: PointerEvent) => {
-      const rawDuration = resizeSession.baseDuration + (pointerEvent.clientY - resizeSession.startY) / HOUR_HEIGHT;
-      const snappedDuration = Math.max(0.25, snapToQuarterHour(rawDuration));
-      const nextDuration = Math.min(snappedDuration, WORK_DAY_END - resizeSession.startHour);
-      setPreviewSlot({
-        day: resizeSession.day,
-        startHour: resizeSession.startHour,
-        duration: nextDuration,
-        mode: "resize"
-      });
-    };
-
-    const handlePointerUp = () => {
-      if (previewSlot?.mode === "resize") {
-        onEventResize(resizeSession.eventId, previewSlot.duration);
+  const handleMouseUp = () => {
+    if (dragState && dragPreview) {
+      if (dragState.type === "move") {
+        onEventMove(dragState.eventId, dragPreview.day, dragPreview.hour);
+      } else {
+        const duration = Math.max(0.25, dragPreview.hour - dragState.startHour);
+        onEventResize(dragState.eventId, duration);
       }
-      setResizeSession(null);
-      setPreviewSlot(null);
-    };
-
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp, { once: true });
-
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-    };
-  }, [onEventResize, previewSlot, resizeSession]);
-
-  const handleDragStart = (event: DragStartEvent) => {
-    if (resizeSession) {
-      return;
     }
-    setActiveId(String(event.active.id));
+    setDragState(null);
+    setDragPreview(null);
   };
 
-  const handleDragMove = ({ active, delta, over }: DragMoveEvent) => {
-    if (resizeSession) {
-      return;
-    }
-
-    const dragged = events.find((event) => event.id === String(active.id));
-    if (!dragged) {
-      setPreviewSlot(null);
-      return;
-    }
-
-    const dayMatch = typeof over?.id === "string" ? over.id.match(/^day-(\d)$/) : null;
-    const nextDay = dayMatch ? Number(dayMatch[1]) : dragged.day;
-    const nextHour = clampStartHour(snapToQuarterHour(dragged.startHour + delta.y / HOUR_HEIGHT), dragged.duration);
-    setPreviewSlot({ day: nextDay, startHour: nextHour, duration: dragged.duration, mode: "move" });
-  };
-
-  const handleDragEnd = ({ active, delta, over }: DragEndEvent) => {
-    if (resizeSession) {
-      return;
-    }
-
-    const dragged = events.find((event) => event.id === String(active.id));
-    if (!dragged) {
-      setActiveId(null);
-      setPreviewSlot(null);
-      return;
-    }
-
-    const dayMatch = typeof over?.id === "string" ? over.id.match(/^day-(\d)$/) : null;
-    const nextDay = dayMatch ? Number(dayMatch[1]) : dragged.day;
-    const nextHour = clampStartHour(snapToQuarterHour(dragged.startHour + delta.y / HOUR_HEIGHT), dragged.duration);
-    onEventMove(dragged.id, nextDay, nextHour);
-    setActiveId(null);
-    setPreviewSlot(null);
-  };
-
-  const handleResizeStart = (event: CalendarEvent, pointerEvent: ReactPointerEvent<HTMLButtonElement>) => {
-    pointerEvent.preventDefault();
-    pointerEvent.stopPropagation();
-    setActiveId(null);
-    setResizeSession({
-      eventId: event.id,
-      startY: pointerEvent.clientY,
-      baseDuration: event.duration,
-      startHour: event.startHour,
-      day: event.day
-    });
-    setPreviewSlot({
-      day: event.day,
-      startHour: event.startHour,
-      duration: event.duration,
-      mode: "resize"
-    });
-  };
+  const totalGridHeight = SLOT_COUNT * HOUR_HEIGHT;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-[#dfe6f2] bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] shadow-[0_20px_48px_rgba(15,23,42,0.07)]">
-      <div className={`grid border-b border-[#edf0f5]`} style={{ gridTemplateColumns: `${TIME_COLUMN_WIDTH}px repeat(7, minmax(0, 1fr))` }}>
-        <div className="flex h-[92px] flex-col justify-end border-r border-[#edf0f5] bg-[linear-gradient(180deg,#f8fbff_0%,#f2f6fb_100%)] px-3 pb-3">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">GMT+8</span>
-          <span className="mt-1 text-[11px] text-slate-500">全天时间轴</span>
-        </div>
-        {headerDays.map((day) => {
-          const isToday = isSameDay(day.date, now);
-          const load = dayLoads[day.index] ?? 0;
-          return (
-            <button
-              key={day.index}
-              type="button"
-              onClick={() => onFocusedDayChange(day.index)}
-              className={`flex h-[92px] flex-col items-start justify-end border-l border-[#edf0f5] px-4 pb-3 text-left ${
-                day.index === 0 || day.index === 6 ? "bg-[#f7f8fb]" : "bg-white/85"
-              } ${focusedDayIndex === day.index ? "bg-sky-50/70" : "hover:bg-slate-50/90"}`}
-            >
-              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">{day.dayLabel}</div>
-              <div className="mt-1 flex items-center gap-2">
-                <span className={`text-[30px] font-semibold leading-none tracking-[-0.03em] ${isToday ? "text-sky-700" : "text-slate-900"}`}>
-                  {day.dateLabel}
-                </span>
-                {isToday ? (
-                  <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-700">今天</span>
-                ) : null}
-              </div>
-              <div className="mt-2 flex w-full items-center gap-2">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full rounded-full bg-sky-600 transition-[width]" style={{ width: `${Math.min((load / 10) * 100, 100)}%` }} />
-                </div>
-                <span className="text-[10px] font-medium text-slate-400">{load.toFixed(load % 1 === 0 ? 0 : 1)}h</span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+    <div className="flex flex-col gap-3">
+      <TimeAllocationBar totalMinutes={totalMinutes} categoryMinutes={categoryMinutes} />
 
-      <div
-        ref={scrollShellRef}
-        className="planner-scroll-shell min-h-0 flex-1 overflow-y-auto overflow-x-auto overscroll-contain bg-[linear-gradient(180deg,#fcfdff_0%,#f7faff_100%)] pr-3 pb-2"
-      >
-        <DndContext
-          sensors={sensors}
-          collisionDetection={pointerWithin}
-          onDragStart={handleDragStart}
-          onDragMove={handleDragMove}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="grid min-h-0" style={{ gridTemplateColumns: `${TIME_COLUMN_WIDTH}px repeat(7, minmax(0, 1fr))` }}>
-            <div className="relative border-r border-[#edf0f5] bg-[linear-gradient(180deg,#f8fbff_0%,#f3f6fb_100%)]" style={{ height: TOTAL_HEIGHT }}>
-              {HOURS.map((hour) => (
+      <div className="flex flex-col rounded-xl border border-[var(--color-border-default)] bg-white shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+        <div className="grid shrink-0 grid-cols-[48px_repeat(7,1fr)] border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)]">
+          <div className="border-r border-[var(--color-border-subtle)]" />
+          {weekDays.map((day, i) => {
+            const isToday = isSameDay(day, today);
+            const isFocused = i === focusedDayIndex;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onFocusedDayChange(i)}
+                className={`flex flex-col items-center justify-center border-r border-[var(--color-border-subtle)] py-1.5 text-center transition-colors ${
+                  isFocused ? "bg-[var(--color-primary-lighter)]" : isToday ? "bg-[var(--color-event-focus-light)]" : "hover:bg-[var(--color-bg-page-subtle)]"
+                } ${i === 6 ? "border-r-0" : ""}`}
+              >
+                <span className={`text-[10px] font-medium ${isFocused || isToday ? "text-[var(--color-primary)]" : "opacity-60 text-[var(--color-text-muted)]"}`}>
+                  {format(day, "EEE", { locale: zhCN })}
+                </span>
+                <span className={`mt-0.5 text-sm font-semibold leading-none ${isFocused || isToday ? "text-[var(--color-primary)]" : isToday ? "text-[var(--color-event-focus)]" : "opacity-70 text-[var(--color-text-secondary)]"}`}>
+                  {format(day, "d")}
+                </span>
+                {isToday && <span className="mt-0.5 h-1 w-1 rounded-full bg-[var(--color-event-focus)]" />}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="overflow-hidden" style={{ height: Math.min(totalGridHeight, window.innerHeight - 200) }}>
+          <div
+            ref={scrollRef}
+            className="h-full overflow-y-auto overflow-x-hidden"
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          >
+            <div style={{ height: totalGridHeight + HOUR_HEIGHT * 2, minWidth: "100%", display: "flex", alignItems: "stretch" }}>
+              <div
+                style={{
+                  width: TIME_AXIS_WIDTH,
+                  flexShrink: 0,
+                  height: totalGridHeight + HOUR_HEIGHT * 2,
+                  overflow: "hidden",
+                  backgroundColor: "var(--color-bg-page-subtle)",
+                  paddingBottom: HOUR_HEIGHT * 2
+                }}
+              >
+                {HOURS.map((h) => (
+                  <div
+                    key={h}
+                    style={{
+                      height: HOUR_HEIGHT,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      paddingRight: 6,
+                      borderBottom: h === 12 ? "1px solid var(--color-border-subtle)" : "1px solid var(--color-border-subtle)",
+                      boxSizing: "border-box"
+                    }}
+                  >
+                    <span className="text-[10px] leading-none opacity-55 text-[var(--color-text-muted)]">{formatHour(h)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0, position: "relative", height: totalGridHeight + HOUR_HEIGHT * 2, paddingBottom: HOUR_HEIGHT * 2 }}>
                 <div
-                  key={hour}
-                  className={`relative h-[56px] border-t border-[#edf0f5] px-3 pt-1.5 text-right text-[11px] font-medium ${
-                    isWorkHour(hour) ? "text-slate-400" : "text-slate-300"
-                  }`}
+                  className="absolute inset-0 grid grid-cols-7"
+                  style={{ gridTemplateRows: `repeat(${SLOT_COUNT}, ${HOUR_HEIGHT}px)` }}
                 >
-                  {formatHourLabel(hour)}
+                  {Array.from({ length: 7 }).map((_, dayIndex) =>
+                    HOURS.map((hour) => (
+                      <div
+                        key={`${dayIndex}-${hour}`}
+                        className={`border-b border-r border-[var(--color-border-subtle)] ${
+                          selectedSlot?.day === dayIndex && Math.abs(selectedSlot.startHour - hour) < 0.5
+                            ? "bg-[var(--color-primary-lighter)]/50"
+                            : "hover:bg-slate-50/50"
+                        } ${dayIndex === 6 ? "border-r-0" : ""}`}
+                        style={{ borderColor: "#E8ECF0" }}
+                        onMouseDown={() => handleGridMouseDown(dayIndex, hour)}
+                      />
+                    ))
+                  )}
                 </div>
-              ))}
-              <div className="absolute bottom-0 right-3 translate-y-1/2 text-[11px] font-medium text-slate-300">
-                {formatHourLabel(DISPLAY_DAY_END)}
+
+                {dragPreview && (
+                  <div
+                    className="pointer-events-none absolute z-10 rounded border-2 border-dashed border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                    style={{
+                      left: `${(dragPreview.day / 7) * 100}%`,
+                      top: `${getSlotY(dragPreview.hour)}px`,
+                      width: `${100 / 7}%`,
+                      height: dragState?.type === "resize" ? `${(dragPreview.hour - (dragState?.startHour ?? 0)) * HOUR_HEIGHT}px` : `${HOUR_HEIGHT}px`
+                    }}
+                  />
+                )}
+
+                {Object.entries(dayEventMap).map(([dayStr, dayEvents]) => {
+                  const day = parseInt(dayStr);
+
+                  const eventSlots = dayEvents.map((event) => ({
+                    event,
+                    start: snapToGridSlot(event.startHour),
+                    end: ceilToGridSlot(event.startHour + event.duration)
+                  }));
+
+                  const overlapGroups: number[][] = [];
+                  const assigned = new Set<number>();
+
+                  for (let i = 0; i < eventSlots.length; i++) {
+                    if (assigned.has(i)) continue;
+                    const group = [i];
+                    assigned.add(i);
+                    for (let j = i + 1; j < eventSlots.length; j++) {
+                      if (assigned.has(j)) continue;
+                      if (
+                        eventSlots[i].start < eventSlots[j].end &&
+                        eventSlots[j].start < eventSlots[i].end
+                      ) {
+                        group.push(j);
+                        assigned.add(j);
+                      }
+                    }
+                    overlapGroups.push(group);
+                  }
+
+                  const columnMap: Record<number, number> = {};
+                  overlapGroups.forEach((group) => {
+                    group.forEach((idx, col) => {
+                      columnMap[idx] = col;
+                    });
+                  });
+
+                  const STACK_OFFSET = 0;
+
+                  return dayEvents.map((event, idx) => {
+                    const slotStart = snapToGridSlot(event.startHour);
+                    const slotEnd = ceilToGridSlot(event.startHour + event.duration);
+                    const baseTop = getSlotY(slotStart);
+                    const timeHeight = getSlotY(slotEnd - slotStart);
+                    const isSelected = selectedEventId === event.id;
+
+                    const MIN_HEIGHT = 24;
+                    const height = Math.max(timeHeight, MIN_HEIGHT);
+
+                    const currentGroup = overlapGroups.find((g) => g.includes(idx)) ?? [idx];
+                    const stackIndex = currentGroup.indexOf(idx);
+                    let top = baseTop + stackIndex * STACK_OFFSET;
+
+                    if (event.aiGenerated && (event.type === "break" || event.type === "habit")) {
+                      top = Math.max(0, top - 16);
+                    }
+
+                    const dayPct = 100 / 7;
+                    const marginPct = 0.6;
+
+                    return (
+                      <div
+                        key={event.id}
+                        className="absolute overflow-hidden rounded-md"
+                        style={{
+                          left: `${day * dayPct + marginPct / 2}%`,
+                          width: `${dayPct - marginPct}%`,
+                          top: `${top}px`,
+                          height: `${height}px`,
+                          zIndex: isSelected ? 10 : 5 + stackIndex
+                        }}
+                        onMouseDown={(e) => {
+                          if (event.fixed) return;
+                          e.stopPropagation();
+                          setDragState({ eventId: event.id, type: "move", startDay: day, startHour: event.startHour });
+                        }}
+                      >
+                        <CalendarEventBlock
+                          event={event}
+                          isSelected={isSelected}
+                          isRecentChange={Boolean(recentChangeMap[event.id])}
+                          onSelect={() => {
+                            setSelectedEventId(event.id);
+                            onEventSelect(event.id);
+                          }}
+                          onMoreAction={() => onMoreAction(event.id)}
+                          onMarkDone={() => onMarkDone(event.id)}
+                          onReschedule={() => onReschedule(event.id)}
+                          onCannotContinue={() => onCannotContinue(event.id)}
+                        />
+                      </div>
+                    );
+                  });
+                })}
               </div>
             </div>
-
-            {eventsByDay.map((dayEvents, index) => (
-              <DayColumn
-                key={index}
-                dayIndex={index}
-                events={dayEvents}
-                isOptimizing={isOptimizing}
-                isToday={index === todayColumnIndex}
-                isFocusedDay={index === focusedDayIndex}
-                showCurrentTimeLine={index === todayColumnIndex}
-                selectedSlot={selectedSlot}
-                previewSlot={previewSlot}
-                activeSection={activeSection}
-                recentChangeMap={recentChangeMap}
-                onEventSelect={onEventSelect}
-                onEmptySlotSelect={onEmptySlotSelect}
-                onEventMarkDone={onMarkDone}
-                onEventReschedule={onReschedule}
-                onEventCannotContinue={onCannotContinue}
-                onEventResizeStart={handleResizeStart}
-                onEventMoreAction={onMoreAction}
-              />
-            ))}
           </div>
-
-          <DragOverlay>
-            {activeEvent ? (
-              <div className="w-[240px]">
-                <CalendarEventBlock
-                  event={activeEvent}
-                  isOverlay
-                  onClick={() => undefined}
-                  onMarkDone={() => undefined}
-                  onReschedule={() => undefined}
-                  onCannotContinue={() => undefined}
-                  onResizeStart={() => undefined}
-                  onMoreAction={() => undefined}
-                />
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+        </div>
       </div>
     </div>
   );

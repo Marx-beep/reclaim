@@ -3,13 +3,12 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
-import { CalendarDays, ChartColumn, Link2, Settings, Sparkles, Zap } from "lucide-react";
+import { CalendarDays, ChartColumn, Link2, Settings, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/", label: "仪表盘", icon: Zap },
+  { href: "/", label: "AI Planner", icon: Sparkles },
   { href: "/calendar", label: "日历", icon: CalendarDays },
-  { href: "/planner", label: "AI Planner", icon: Sparkles },
   { href: "/links", label: "预约链接", icon: Link2 },
   { href: "/analytics", label: "分析", icon: ChartColumn },
   { href: "/settings", label: "设置", icon: Settings }
@@ -24,7 +23,7 @@ export function SidebarNav() {
         <div className="mb-6 flex-1 overflow-hidden rounded-2xl border border-[rgba(148,163,184,0.18)] bg-white shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
           <div className="px-5 pt-5">
             <div className="text-[10px] uppercase tracking-[0.28em] text-[var(--color-text-muted)]">导航</div>
-            <div className="mt-2 text-xl font-semibold text-[var(--color-text-primary)]">Reclaim Planner</div>
+            <div className="mt-2 text-xl font-semibold text-[var(--color-text-primary)]">AI Planner</div>
             <p className="mt-2 text-sm leading-5 text-[var(--color-text-muted)]">
               把任务、习惯和专注时段收进同一块时间画布里。
             </p>

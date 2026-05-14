@@ -75,7 +75,7 @@ export function Sidebar({
                 onClick={() => onSelectSection(item.key)}
                 className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition ${
                   active
-                    ? "border border-sky-100 bg-white text-slate-950 shadow-[0_12px_24px_rgba(37,99,235,0.12)]"
+                    ? "border border-[var(--color-border-default)] bg-white text-slate-950 shadow-[0_12px_24px_rgba(138,136,184,0.12)]"
                     : "text-slate-400 hover:bg-white/90 hover:text-slate-800"
                 }`}
                 title={item.label}
@@ -90,7 +90,7 @@ export function Sidebar({
                   />
                 ) : null}
                 {badge ? (
-                  <span className="absolute -right-2 -top-2 min-w-[16px] rounded-full bg-slate-900 px-1.5 py-0.5 text-[9px] font-semibold leading-none text-white">
+                  <span className="absolute -right-2 -top-2 min-w-[16px] rounded-full bg-[var(--color-btn-solid)] px-1.5 py-0.5 text-[9px] font-semibold leading-none text-white">
                     {badge}
                   </span>
                 ) : null}

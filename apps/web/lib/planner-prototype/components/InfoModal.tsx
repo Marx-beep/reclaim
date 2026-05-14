@@ -36,7 +36,7 @@ export function InfoModal({ open, title, subtitle, lines, onClose }: InfoModalPr
 
         <button
           type="button"
-          className="mt-5 w-full rounded-xl bg-slate-900 px-4 py-2.5 text-[13px] font-medium text-white transition hover:bg-slate-800"
+          className="mt-5 w-full rounded-xl bg-[var(--color-btn-solid)] px-4 py-2.5 text-[13px] font-medium text-white transition hover:bg-[var(--color-btn-solid-hover)]"
           onClick={onClose}
         >
           我知道了

@@ -1,4 +1,4 @@
-import { addDays, format } from "date-fns";
+import { addDays, differenceInDays, startOfWeek, format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import type { CalendarEvent, EventPriority, TaskItem } from "../types/calendar";
 
@@ -8,7 +8,13 @@ export const DISPLAY_DAY_START = 0;
 export const DISPLAY_DAY_END = 24;
 export const WORKING_HOURS_PER_WEEK = (WORK_DAY_END - WORK_DAY_START) * 7;
 export const HOUR_HEIGHT = 56;
-export const TODAY_INDEX = 1;
+
+function getTodayIndex() {
+  const today = new Date();
+  const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+  return differenceInDays(today, weekStart);
+}
+export const TODAY_INDEX = getTodayIndex();
 
 export const PRIORITY_WEIGHT: Record<EventPriority, number> = {
   P1: 4,
