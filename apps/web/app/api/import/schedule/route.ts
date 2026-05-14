@@ -2,8 +2,9 @@ import { fail, ok } from "@/lib/api/response";
 import { getOrCreateCurrentUserId } from "@/lib/auth/session";
 import { prisma } from "@/lib/server/db";
 import { recomputeWindowSafely } from "@/lib/server/recompute";
+import { requestAiScheduleImport } from "@/lib/server/schedule-import/ai";
 import { extractTextFromScheduleFile } from "@/lib/server/schedule-import/extract";
-import { parseScheduleText } from "@/lib/server/schedule-import/parser";
+import { parseScheduleText, type ParsedScheduleItem } from "@/lib/server/schedule-import/parser";
 import { buildTagMetadata } from "@/lib/tags/time-categories";
 
 function inferCategoryTagByTitle(title: string) {
@@ -40,12 +41,37 @@ export async function POST(request: Request) {
       "UTC";
 
     const extracted = await extractTextFromScheduleFile(fileValue);
-    const parsed = parseScheduleText({
-      text: extracted.text,
-      timezone
-    });
+    let importEngine: string = extracted.engine;
+    let aiExplanation: string | undefined;
+    let parsedItems: ParsedScheduleItem[] = [];
+    let skippedLines: string[] = [];
 
-    if (parsed.parsed.length === 0) {
+    try {
+      const aiParsed = await requestAiScheduleImport({
+        text: extracted.text,
+        timezone,
+        fileName: fileValue.name
+      });
+      if (aiParsed.parsed.length > 0) {
+        parsedItems = aiParsed.parsed;
+        aiExplanation = aiParsed.explanation;
+        importEngine = `llm:${aiParsed.model}`;
+      }
+    } catch (error) {
+      // AI parsing is an enhancement, not a hard dependency. Keep local parsing as a stable fallback.
+      aiExplanation = error instanceof Error ? `AI parsing fallback: ${error.message}` : "AI parsing fallback";
+    }
+
+    if (parsedItems.length === 0) {
+      const parsed = parseScheduleText({
+        text: extracted.text,
+        timezone
+      });
+      parsedItems = parsed.parsed;
+      skippedLines = parsed.skipped;
+    }
+
+    if (parsedItems.length === 0) {
       return fail("No schedule entries recognized from file. Please use clearer time-format text.");
     }
 
@@ -56,7 +82,7 @@ export async function POST(request: Request) {
     if (autoCreate) {
       const created = await prisma.$transaction(async (tx) => {
         const results: Array<{ id: string; startAt: Date; endAt: Date }> = [];
-        for (const item of parsed.parsed) {
+        for (const item of parsedItems) {
           const startAt = new Date(item.startAt);
           const endAt = new Date(item.endAt);
 
@@ -89,13 +115,14 @@ export async function POST(request: Request) {
               lockState: "BUSY",
               metadata: {
                 ...buildTagMetadata(undefined, {
-                  categoryTag: inferCategoryTagByTitle(item.title),
-                  customTags: ["文件导入"],
+                  categoryTag: item.categoryTag ?? inferCategoryTagByTitle(item.title),
+                  customTags: ["文件导入", ...(item.customTags ?? [])],
                   fallbackCategory: "WORK"
                 }),
                 imported: true,
                 importSource: "FILE",
-                importEngine: extracted.engine,
+                importEngine,
+                aiExplanation,
                 confidence: item.confidence,
                 sourceLine: item.sourceLine
               }
@@ -125,12 +152,13 @@ export async function POST(request: Request) {
 
     return ok({
       timezone,
-      importEngine: extracted.engine,
+      importEngine,
+      aiExplanation,
       extractedTextPreview: extracted.text.slice(0, 8000),
-      parsedCount: parsed.parsed.length,
+      parsedCount: parsedItems.length,
       createdCount,
       createdEventIds,
-      skippedLines: parsed.skipped,
+      skippedLines,
       skippedDuplicates,
       autoCreate
     });

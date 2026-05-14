@@ -6,6 +6,8 @@ export type ParsedScheduleItem = {
   startAt: string;
   endAt: string;
   confidence: number;
+  categoryTag?: string;
+  customTags?: string[];
 };
 
 export type ParseScheduleTextInput = {

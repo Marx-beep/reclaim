@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Copy, Link2, Plus, RefreshCw, Shield, Target, Check, Eye, Clock, Users, Calendar as CalendarIcon, Lightbulb, AlertCircle, Timer } from "lucide-react";
+import { Copy, Link2, Plus, RefreshCw, Shield, Target, Check, Eye, Clock, Users, Calendar as CalendarIcon, Lightbulb, AlertCircle, Timer, UploadCloud, FileText } from "lucide-react";
 import { useState } from "react";
 import type {
   CalendarConnectionItem,
@@ -1511,6 +1511,127 @@ function formatLastSynced(lastSynced: string): string {
   }
 }
 
+function TimeArrangementImportCard() {
+  const [file, setFile] = useState<File | null>(null);
+  const [previewOnly, setPreviewOnly] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [result, setResult] = useState<{
+    parsedCount?: number;
+    createdCount?: number;
+    importEngine?: string;
+    aiExplanation?: string;
+    message?: string;
+  } | null>(null);
+
+  const canUpload = Boolean(file) && !isUploading;
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setIsUploading(true);
+    setResult(null);
+
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Shanghai");
+      body.append("autoCreate", previewOnly ? "false" : "true");
+
+      const response = await fetch("/api/import/time-arrangement", {
+        method: "POST",
+        body
+      });
+      const data = (await response.json()) as {
+        parsedCount?: number;
+        createdCount?: number;
+        importEngine?: string;
+        aiExplanation?: string;
+        message?: string;
+      };
+
+      if (!response.ok) {
+        setResult({ message: data.message || "导入失败，请检查文件内容是否包含清晰的时间安排。" });
+        return;
+      }
+
+      setResult(data);
+    } catch (error) {
+      setResult({ message: error instanceof Error ? error.message : "导入失败，请稍后重试。" });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <Card className="border-[#B8D7FF] bg-gradient-to-br from-white via-[#F8FBFF] to-[#EEF5FF]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAF3FF] text-[#2563EB]">
+            <UploadCloud className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[15px] font-semibold text-slate-950">时间安排导入</div>
+            <div className="mt-1 max-w-2xl text-[12px] leading-5 text-slate-500">
+              上传课程表、排班表、图片、PDF、Word 或文本文件。系统会先调用后台大模型解析时间块，再自动写入日历；如果模型不可用，会回退本地规则解析。
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-medium text-slate-500">
+              {["图片/OCR", "PDF", "Word docx", "TXT", "DeepSeek 解析", "自动填充日历"].map((item) => (
+                <span key={item} className="rounded-full border border-slate-200 bg-white px-2 py-1">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full shrink-0 space-y-2 lg:w-[360px]">
+          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-[#B8D7FF] bg-white px-3 py-3 text-[12px] text-slate-600 transition hover:border-[#2563EB] hover:text-slate-950">
+            <FileText className="h-4 w-4 text-[#2563EB]" />
+            <span className="min-w-0 flex-1 truncate">{file ? file.name : "选择图片、PDF、Word 或文本文件"}</span>
+            <input
+              type="file"
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx,.txt,.csv"
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            />
+          </label>
+          <div className="flex items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-[11px] text-slate-500">
+              <input
+                type="checkbox"
+                checked={previewOnly}
+                onChange={(event) => setPreviewOnly(event.target.checked)}
+                className="h-3.5 w-3.5 rounded border-slate-300"
+              />
+              仅预览，不写入日历
+            </label>
+            <button
+              type="button"
+              disabled={!canUpload}
+              onClick={handleUpload}
+              className="rounded-xl bg-[#111827] px-4 py-2 text-[12px] font-semibold text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] transition hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {isUploading ? "识别中..." : previewOnly ? "识别预览" : "识别并导入"}
+            </button>
+          </div>
+          {result ? (
+            <div className={`rounded-xl px-3 py-2 text-[11px] leading-5 ${result.message ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>
+              {result.message ? (
+                result.message
+              ) : (
+                <>
+                  已识别 {result.parsedCount ?? 0} 个时间块，已写入 {result.createdCount ?? 0} 个事件。
+                  {result.importEngine ? <span> 引擎：{result.importEngine}</span> : null}
+                  {result.aiExplanation ? <div className="mt-1 text-emerald-600">{result.aiExplanation}</div> : null}
+                </>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export function SyncView({
   connections,
   onToggleConnection,
@@ -1533,6 +1654,8 @@ export function SyncView({
       badge={`${syncedCount} 个已连接`}
     >
       <div className="flex h-full min-h-0 flex-col gap-4">
+        <TimeArrangementImportCard />
+
         <Card>
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2 text-[13px] font-semibold text-[#111318]">

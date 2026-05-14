@@ -1,20 +1,16 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 function Resolve-CommandPath([string[]]$names) {
   foreach ($name in $names) {
     $cmd = Get-Command $name -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($cmd) {
-      return $cmd.Source
-    }
+    if ($cmd) { return $cmd.Source }
   }
   return $null
 }
 
 function Resolve-Pnpm() {
   $pnpm = Resolve-CommandPath @("pnpm.cmd", "pnpm")
-  if ($pnpm) {
-    return $pnpm
-  }
+  if ($pnpm) { return $pnpm }
 
   $corepack = Resolve-CommandPath @("corepack.cmd", "corepack")
   if ($corepack) {
@@ -22,12 +18,10 @@ function Resolve-Pnpm() {
     & $corepack enable | Out-Host
     & $corepack prepare "pnpm@9.12.2" --activate | Out-Host
     $pnpm = Resolve-CommandPath @("pnpm.cmd", "pnpm")
-    if ($pnpm) {
-      return $pnpm
-    }
+    if ($pnpm) { return $pnpm }
   }
 
-  throw "pnpm not found. Install Node.js 18+ (with corepack) or install pnpm globally."
+  throw "pnpm not found. Install Node.js 18+ with corepack, or install pnpm globally."
 }
 
 $workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path

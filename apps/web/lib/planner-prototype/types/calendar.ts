@@ -120,6 +120,8 @@ export interface QuickTaskInput {
   priority: EventPriority;
   urgent: boolean;
   energyLevel: EnergyLevel;
+  dueDay?: number;
+  dueHour?: number;
   targetDay?: number;
   targetStartHour?: number;
   pinToSlot?: boolean;

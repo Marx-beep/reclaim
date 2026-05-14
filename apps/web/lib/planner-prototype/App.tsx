@@ -804,8 +804,8 @@ export default function App() {
       return;
     }
 
-    const targetDueDay = input.targetDay ?? focusedDayIndex;
-    const defaultDueHour = 18;
+    const targetDueDay = input.dueDay ?? input.targetDay ?? focusedDayIndex;
+    const defaultDueHour = input.dueHour ?? 18;
 
     const nextTask: TaskItem = {
       id: generateId("task"),
