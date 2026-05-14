@@ -1,160 +1,59 @@
-﻿# Reclaim AI 风格动态时间管理平台
+﻿# Reclaim Planner 动态时间管理平台
 
-这是一个本地可运行、可扩展的动态时间管理平台。它不是普通日历，而是围绕“任务、习惯、专注时间、会议、时间安排导入、AI 策略建议、规则重排、用量监控”构建的智能调度系统。
+Reclaim Planner 是一个本地可运行的动态时间管理平台。它不是普通日历，而是一个围绕任务、习惯、专注时间、会议、预约链接、时间安排导入、AI 策略建议和规则重排构建的智能调度系统。
 
-当前版本聚焦单用户 MVP：可以创建任务与事件、查看日历、做四象限任务管理、分析时间分配、导入时间安排、调用 DeepSeek/兼容大模型参与重排，并通过独立运维后台监控系统状态与 API 用量。
+当前版本是单用户 MVP，适合本地使用、产品原型验证、继续二次开发和演示分发。
 
-## 1. 软件能做什么
+## 当前状态
 
-核心能力：
+已经实现：
 
-- 任务管理：创建自定义任务，不使用固定模板，可设置优先级、截止时间、标签和时间段。
-- 日历视图：用 FullCalendar 展示日程，从早上 6 点开始显示，支持选择时间段添加任务/事件。
-- 动态重排：任务延迟、提前完成、新增、删除、拖动时间块后，可触发重新排程。
-- AI 调度建议：可接入 DeepSeek 或 OpenAI 兼容接口，让大模型生成调度策略建议，再由规则引擎执行。
-- 本地规则兜底：未配置 API Key 或模型调用失败时，会自动回退到本地规则重排，避免功能中断。
-- 四象限任务视图：仪表盘展示重要紧急、重要不紧急、紧急不重要、不紧急不重要四类任务。
-- 时间分析：统计专注、会议、任务、习惯、缓冲、个人时间等占比，辅助优化时间管理。
-- 时间安排导入：支持上传图片、PDF、Word 等时间安排内容，解析后导入日历。
-- 预约链接：支持基础 scheduling links 能力。
-- 运维后台：与用户前端分离，用于查看用户数、作业、系统健康、调度日志、DeepSeek Key 与用量。
-- 桌面端分发：可打包 Electron exe，并把 exe 与中文教程放入 `app-use/` 文件夹。
+- 中文界面
+- 类 Reclaim 的 Planner 工作台
+- 深色左侧导航与浅色日历工作区
+- 四象限任务仪表盘
+- 日历视图
+- 手动添加任务、计划、事件
+- 点击/选择时间段创建任务
+- 类别标签与个性化标签
+- 时间使用分析
+- 时间安排导入接口
+- 预约链接基础能力
+- DeepSeek / OpenAI 兼容大模型调度建议
+- 本地规则重排兜底
+- 独立运维后台
+- AI Key 配置与用量统计
+- Python FastAPI 调度服务
+- Docker 本地基础设施
+- Windows 一键启动脚本
+- Electron exe 打包与 app-use 分发目录
 
-## 2. 技术架构
-
-项目采用 Monorepo：
+主要入口：
 
 ```text
-reclaim/
-  apps/
-    web/                 Next.js 前端 + BFF API
-    desktop/             Electron 桌面壳
-  packages/
-    database/            Prisma + PostgreSQL
-    domain/              SmartEvent 与调度领域模型
-    integrations/        Google Calendar / Outlook Calendar 集成
-    queue/               BullMQ + Redis 队列
-    recurrence/          rrule 重复规则
-    temporal/            Temporal 时间处理封装
-    config/              环境配置
-  services/
-    scheduler/           Python FastAPI + OR-Tools/规则调度服务
-  infra/
-    compose/             Docker Compose 本地基础设施
-  scripts/
-    windows/             Windows 一键启动、检查、打包、Git 同步脚本
-  app-use/               对外分发 exe 与中文教程
+前端应用：http://localhost:3000
+新版 Planner：http://localhost:3000/planner
+运维后台：http://localhost:3000/ops
+调度服务：http://localhost:8000/docs
 ```
 
-主要技术栈：
-
-- Monorepo：pnpm workspace + turbo
-- Web：Next.js App Router + TypeScript + Tailwind CSS + TanStack Query + FullCalendar
-- 数据库：Prisma + PostgreSQL
-- 队列：BullMQ + Redis
-- 调度服务：Python + FastAPI + OR-Tools + 规则启发式调度
-- 日历集成：googleapis + Microsoft Graph JavaScript SDK
-- 重复规则：rrule
-- 时间处理：Temporal polyfill
-- 桌面端：Electron
-- AI：DeepSeek/OpenAI 兼容 Chat Completions API
-
-## 3. 运行环境要求
-
-推荐环境：
-
-- Windows 10/11
-- Node.js 18+
-- Python 3.11+
-- Docker Desktop
-- Git
-- pnpm，若未安装，脚本会尝试通过 corepack 自动启用
-
-新电脑建议先运行：
-
-```bat
-scripts\windows\check-env.cmd
-```
-
-或：
-
-```bash
-npm run maintenance:check
-```
-
-## 4. 首次安装与启动
-
-1. 复制环境变量：
-
-```bash
-copy .env.example .env
-```
-
-Linux/macOS 可用：
-
-```bash
-cp .env.example .env
-```
-
-2. 安装依赖：
-
-```bash
-pnpm install
-```
-
-3. 启动 PostgreSQL 与 Redis：
-
-```bash
-docker compose -f infra/compose/docker-compose.yml up -d postgres redis
-```
-
-4. 初始化数据库：
-
-```bash
-pnpm db:generate
-pnpm db:migrate
-pnpm db:seed
-```
-
-5. 一键启动 Web 与调度服务：
-
-```bat
-scripts\windows\start-maintenance.cmd
-```
-
-或：
-
-```bash
-npm run maintenance:start
-```
-
-启动后访问：
-
-- 前端应用：`http://localhost:3000/`
-- 运维后台：`http://localhost:3000/ops`
-- 调度服务文档：`http://localhost:8000/docs`
-
-默认运维后台口令：
+默认运维口令：
 
 ```text
 reclaim-admin
 ```
 
-可以在 `.env` 中修改：
+可以在 `.env` 中通过 `OPS_ADMIN_PASSWORD` 修改。
 
-```bash
-OPS_ADMIN_PASSWORD=你的新口令
-```
+## 一分钟启动
 
-## 5. 日常启动、停止与状态检查
-
-启动：
+在 Windows 上推荐使用脚本启动。
 
 ```bat
 scripts\windows\start-maintenance.cmd
 ```
 
-停止：
+停止服务：
 
 ```bat
 scripts\windows\stop-maintenance.cmd
@@ -166,256 +65,259 @@ scripts\windows\stop-maintenance.cmd
 scripts\windows\status-maintenance.cmd
 ```
 
-npm 命令：
+如果是第一次在新电脑运行，请先检查环境：
 
-```bash
-npm run maintenance:start
-npm run maintenance:stop
-npm run maintenance:status
+```bat
+scripts\windows\check-env.cmd
 ```
 
-说明：
+## 首次安装
 
-- Python 调度服务会在 `services/scheduler/.venv` 虚拟环境中运行。
-- 第一次启动会自动创建虚拟环境并安装 Python 依赖。
-- `.venv`、`.runtime`、`.env`、构建产物不会上传到 GitHub。
+推荐环境：
 
-## 6. 使用流程
+- Windows 10/11
+- Git
+- Node.js 18+
+- pnpm
+- Docker Desktop
+- Python 3.11+
 
-推荐使用顺序：
+安装步骤：
 
-1. 打开前端：`http://localhost:3000/`
-2. 在仪表盘查看四象限任务，判断哪些任务需要优先处理。
-3. 进入日历页：`/calendar`。
-4. 点击或框选时间段，创建任务、计划或事件。
-5. 为时间记录选择类别标签，例如学习、工作、娱乐、会议、运动、个人、通勤、休息等。
-6. 如果任务延迟、拖动时间块或点击“干不下去了”，触发动态重排。
-7. 如需体验更接近 Reclaim 的 Planner 工作台，可以进入 `/planner`。
-8. 系统优先尝试 AI 策略建议；失败时自动使用本地规则重排。
-9. 在分析页查看时间分配、专注时间、会议占比、任务完成情况。
-10. 在设置页调整工作时间、可用时间、时间策略。
-11. 在运维后台查看系统健康、调度记录、AI 用量和费用估算。
+```bash
+copy .env.example .env
+pnpm install
+docker compose -f infra/compose/docker-compose.yml up -d postgres redis
+pnpm db:generate
+pnpm db:migrate
+pnpm db:seed
+scripts\windows\start-maintenance.cmd
+```
 
-## 7. 页面说明
+如果没有 pnpm，可以先尝试：
 
-### 仪表盘 `/`
+```bash
+corepack enable
+corepack prepare pnpm@latest --activate
+```
 
-仪表盘用于四象限任务管理：
+## 软件怎么用
 
-- 重要且紧急：立即处理
-- 重要不紧急：优先规划
-- 紧急不重要：可委派或压缩
-- 不紧急不重要：低优先级处理
+### 1. 打开主界面
 
-任务由用户自己创建，不是固定任务。四象限只是任务组织方式。
+访问：
 
-### 日历 `/calendar`
+```text
+http://localhost:3000
+```
 
-日历是核心工作台：
+主界面用于查看任务总览、日历、分析、设置等页面。
 
-- 从早上 6 点开始展示时间轴。
-- 支持查看任务、会议、专注时间、习惯、缓冲时间。
-- 支持点击或选择时间段创建任务/事件。
-- 支持给时间块添加类别标签和个性化标签。
-- 支持拖动时间块触发动态重排。
+### 2. 使用新版 Planner
 
-### AI Planner `/planner`
+访问：
 
-AI Planner 是从 `feature/planner-web-integration` 分支合入的新版 Planner 工作台。它保留了现有主线的后端能力，同时新增更完整的前端交互原型：
+```text
+http://localhost:3000/planner
+```
 
-- 类 Reclaim 的 Planner 视觉布局。
-- 左侧模块导航，右侧任务面板。
-- 周视图时间网格。
-- 时间块拖动与恢复体验。
-- “干不下去了”重排入口。
-- 任务、习惯、专注、会议、缓冲等模块化展示。
-- 与 `/api/scheduling/replan` 对接，可继续使用 DeepSeek 或本地规则引擎。
+新版 Planner 是当前重点工作台，包含：
 
-说明：该页面目前是集成型 Planner 原型，用于验证交互流程和视觉方向；主数据仍以现有 SmartEvent、任务、日历和调度 API 为准，后续可以逐步替换原型 mock 数据为真实数据库数据。
+- 深色左侧导航
+- 中央周视图日历
+- 右侧任务与 AI 建议面板
+- 任务、习惯、专注、会议、预约链接、同步、分析、设置模块
+- 拖动时间块、调整时长、重排、恢复方案等交互
 
-### 预约链接 `/links`
+如果浏览器显示旧样式，请强制刷新：
 
-用于创建基础预约链接，后续可扩展为团队会议和外部预约能力。
+```text
+Ctrl + F5
+```
 
-### 分析 `/analytics`
+### 3. 创建任务和事件
 
-用于可视化时间使用：
+可以通过以下方式创建：
 
-- 时间分类占比
-- 专注时间趋势
-- 会议时间趋势
-- 任务/习惯用时
-- 工作与个人时间平衡
-- 浅层工作与深度工作对比
-- 加班与非工作时间占用
+- 在快速创建区域输入任务
+- 在日历中点击时间段
+- 在任务池中创建自定义任务
+- 通过导入时间安排生成事件
 
-### 设置 `/settings`
+任务不是固定模板，用户可以自由创建。
 
-用于配置：
+### 4. 使用标签
 
-- 日历同步
-- 可用时间
-- 工作时间
-- 时间策略
-- 锁定策略
-- 缓冲策略
+系统区分两类标签。
 
-### 运维后台 `/ops`
+类别标签用于统计时间记录，例如：
 
-这是维护者使用的独立后台，不属于普通用户前端。
-
-功能包括：
-
-- 用户总数
-- 已连接日历数
-- 7 天内事件数
-- 活跃预约链接数
-- 数据库健康状态
-- 调度服务健康状态
-- Redis/BullMQ 队列状态
-- 最近调度作业
-- 最近调度决策
-- DeepSeek API Key 配置
-- AI 调用次数、token 用量、预估费用
-
-## 8. 标签体系
-
-系统区分两类标签：
-
-### 类别标签
-
-类别标签用于时间记录与统计分析。建议覆盖完整时间使用场景：
-
-- 学习
-- 工作
-- 深度工作
-- 会议
-- 任务
-- 习惯
-- 娱乐
-- 运动
-- 休息
-- 睡眠
-- 家庭
-- 社交
-- 通勤
-- 旅行
-- 吃饭
-- 个人事务
-- 健康
-- 财务
-- 创作
-- 阅读
-- 其他
-
-分析页优先使用类别标签来统计时间分配。
-
-### 个性化标签
+```text
+学习、工作、深度工作、会议、任务、习惯、娱乐、运动、休息、睡眠、家庭、社交、通勤、旅行、吃饭、个人事务、健康、财务、创作、阅读、其他
+```
 
 个性化标签用于用户自己的组织方式，例如：
 
-- 考研
-- 论文
-- 项目A
-- 客户B
-- 复盘
-- 英语
-- 编程
-- 健身
+```text
+论文、考研、项目A、客户B、英语、编程、健身、复盘
+```
 
-个性化标签不替代类别标签，而是作为更细粒度的补充。
+分析页优先使用类别标签统计时间分配。
 
-## 9. 动态调度原理
+### 5. 触发动态重排
 
-系统采用“两层调度”思路：
+以下行为可以触发重排：
 
-### 第一层：规则调度引擎
+- 任务延迟
+- 任务提前完成
+- 新增任务
+- 删除任务
+- 拖动时间块
+- 点击“干不下去了”
+- 手动调用重排 API
 
-本地调度服务会处理确定性规则：
+系统会优先调用 AI 生成调度策略建议，然后交给本地规则引擎校验和执行。如果 AI 不可用，会自动使用本地规则兜底。
 
-- 优先级排序
-- 截止时间提前
-- 任务延迟后顺延
-- 新任务插入
-- 删除任务后释放时间
-- 低优先级任务后移
-- 必要时压缩任务
-- 插入缓冲时间
-- hard lock 事件不可移动
-- 工作时间与非工作时间判断
-- 局部重排，而不是每次全量重算
+## 核心功能
 
-### 第二层：AI 策略建议
+### 动态日历
 
-大模型不直接改数据库，也不拥有最终执行权。它负责：
+日历从早上 6 点开始显示，更适合学习、工作、课程和日常计划。
 
-- 理解用户输入
-- 根据规则给出重排建议
-- 解释为什么这样安排
-- 生成新的时间块草案
+支持的时间块类型：
 
-随后系统会交给本地规则引擎或后端 API 执行与校验。
+```text
+任务、习惯、专注时间、会议、缓冲时间、预约占位、个人时间、PTO/OOO
+```
 
-这样的好处是：
+支持的锁定状态：
 
-- AI 更灵活，可以理解自然语言。
-- 规则引擎更稳定，可以保证基本约束不被破坏。
-- AI 失败时，本地规则仍能继续工作。
-- 调度结果可解释、可测试、可维护。
+```text
+FREE、BUSY、SOFT_LOCKED、HARD_LOCKED
+```
 
-## 10. DeepSeek / 大模型配置
+### 四象限任务
 
-有两种方式配置。
+仪表盘用于展示四象限任务：
 
-### 方式一：运维后台配置
+```text
+重要且紧急
+重要不紧急
+紧急不重要
+不紧急不重要
+```
 
-打开：
+四象限用于帮助判断处理顺序，不限制用户创建任务。
+
+### 时间分析
+
+分析页面提供：
+
+- 深度工作时长
+- 会议时长
+- 任务完成率
+- 时间利用率
+- 时间分类构成
+- 时间分配趋势
+- 习惯与任务投入
+- 专注 vs 浅层工作
+- 工作生活平衡
+
+### 时间安排导入
+
+接口名称为“时间安排”，支持后续扩展图片、PDF、Word 等内容识别。
+
+相关 API：
+
+```http
+POST /api/import/time-arrangement
+```
+
+设计目标：上传课程表、排班表、时间安排截图、PDF 或 Word 后，系统识别时间块并加入日历。
+
+### 预约链接
+
+预约链接用于让别人选择你的可用时间。例如：
+
+- 咨询预约
+- 会议预约
+- 项目沟通
+- 面试安排
+
+当前是基础 MVP，后续可以扩展为团队预约、外部访客页面、Google/Outlook 写回等能力。
+
+## AI 调度设计
+
+本项目不让大模型直接控制数据库，也不让它绕过规则直接改日历。
+
+采用两阶段：
+
+```text
+用户变化 -> AI 策略建议 -> 本地规则/调度引擎执行 -> 返回时间块与解释
+```
+
+这样设计的原因：
+
+- AI 适合理解自然语言和复杂偏好
+- 规则引擎适合保证时间约束稳定
+- OR-Tools / 启发式规则适合做可验证排程
+- AI 失败时系统仍能工作
+- 调度原因可以记录和解释
+
+## DeepSeek 配置
+
+打开运维后台：
 
 ```text
 http://localhost:3000/ops
 ```
 
-进入 `DeepSeek API 配置与用量`：
+在后台配置：
 
-- 输入 API Key
-- 输入模型名，例如 `deepseek-v4-flash`
-- 输入接口地址，例如 `https://api.deepseek.com/chat/completions`
-- 输入 token 单价，用于估算费用
-- 点击保存配置
+- API Key
+- 模型名称
+- API URL
+- 输入 token 单价
+- 输出 token 单价
 
-保存后，`/api/scheduling/replan` 会自动使用该配置。
+推荐 DeepSeek 兼容配置：
 
-安全说明：
+```text
+API URL：https://api.deepseek.com/chat/completions
+Model：deepseek-chat 或 deepseek-v4-flash
+```
 
-- 页面只显示脱敏 Key。
-- 真实 Key 存在 `.runtime/llm-settings.json`。
-- `.runtime` 已加入 `.gitignore`，不会上传 GitHub。
-
-### 方式二：`.env` 配置
+也可以通过 `.env` 配置：
 
 ```bash
-DEEPSEEK_API_KEY=你的DeepSeek密钥
-DEEPSEEK_MODEL=deepseek-v4-flash
+DEEPSEEK_API_KEY=你的密钥
+DEEPSEEK_MODEL=deepseek-chat
 DEEPSEEK_API_URL=https://api.deepseek.com/chat/completions
 ```
 
-也支持 OpenAI 兼容配置：
+真实 Key 会保存在：
 
-```bash
-OPENAI_API_KEY=你的密钥
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_BASE_URL=https://api.openai.com/v1/chat/completions
+```text
+.runtime/llm-settings.json
 ```
 
-## 11. 关键 API
+调用用量会记录在：
 
-### 前端统一重排接口
+```text
+.runtime/llm-usage.json
+```
+
+`.runtime` 已加入 `.gitignore`，不会上传到 GitHub。
+
+## 关键 API
+
+### 动态重排 API
 
 ```http
 POST /api/scheduling/replan
 ```
 
-示例请求：
+请求示例：
 
 ```json
 {
@@ -426,7 +328,7 @@ POST /api/scheduling/replan
 }
 ```
 
-示例响应：
+响应示例：
 
 ```json
 {
@@ -452,138 +354,143 @@ POST /api/scheduling/replan
 }
 ```
 
-支持的典型触发：
-
-- `task_delayed`：任务超时或延迟
-- `task_finished_early`：任务提前完成
-- `task_added`：新增任务
-- `task_deleted`：删除任务
-- `task_moved`：拖动时间块
-- `burnout`：用户点击“干不下去了”
-
-### AI 策略建议接口
+### LLM 重排 API
 
 ```http
 POST /api/scheduling/llm-replan
 ```
 
-示例：
-
-```json
-{
-  "instruction": "请优先保障48小时内截止任务，尽量减少会议打断",
-  "fallbackOnError": true
-}
-```
-
-### Planner 页面重排触发
-
-`/planner` 页面中的拖动、任务恢复、“干不下去了”等操作会通过前端 replan client 调用统一重排能力。主入口仍是：
+### 调度规则 API
 
 ```http
-POST /api/scheduling/replan
-```
-
-这样可以保证 Planner UI 不直接写死调度逻辑，而是复用后端 AI + 本地规则的调度链路。
-
-### 规则维护接口
-
-```http
+GET /api/scheduling/llm-rules
 PUT /api/scheduling/llm-rules
 ```
 
-示例：
+### 事件级重排 API
 
-```json
-{
-  "rules": [
-    { "content": "硬锁定事件不可移动", "enabled": true, "weight": 3 },
-    { "content": "48小时内截止任务优先级提升", "enabled": true, "weight": 2 },
-    { "content": "尽量减少同一天上下文切换", "enabled": true, "weight": 1.5 }
-  ]
-}
+```http
+POST /api/scheduling/event-replan
+POST /api/scheduling/event-replan/undo
 ```
 
-### 运维后台 LLM 配置接口
+### 运维后台 AI 配置 API
 
 ```http
 GET /api/admin/llm-settings
 POST /api/admin/llm-settings
 ```
 
-`GET` 返回脱敏配置与用量统计。
-
-`POST` 保存配置：
-
-```json
-{
-  "apiKey": "sk-xxx",
-  "model": "deepseek-v4-flash",
-  "apiUrl": "https://api.deepseek.com/chat/completions",
-  "inputTokenUsdPerMillion": 0.1,
-  "outputTokenUsdPerMillion": 0.2
-}
-```
-
-### 其他 API
-
-- `/api/auth/*`
-- `/api/calendars/connect/google`
-- `/api/calendars/connect/outlook`
-- `/api/calendars/sync`
-- `/api/events`
-- `/api/tasks`
-- `/api/tasks/[id]/schedule`
-- `/api/habits`
-- `/api/focus`
-- `/api/scheduling/recompute`
-- `/api/scheduling/replan`
-- `/api/scheduling/dynamic-replan`
-- `/api/scheduling/llm-replan`
-- `/api/scheduling/llm-rules`
-- `/api/scheduling/event-replan`
-- `/api/scheduling/event-replan/undo`
-- `/api/scheduling/preview`
-- `/api/links`
-- `/api/analytics/weekly`
-- `/api/settings/time-policy`
-- `/api/import/time-arrangement`
-
-## 12. 数据与安全说明
-
-不会上传到 GitHub 的内容：
-
-- `.env`
-- `.env.local`
-- `.runtime/`
-- `node_modules/`
-- `.next/`
-- `.turbo/`
-- `services/scheduler/.venv/`
-- `apps/desktop/dist/`
-- 日志和 pid 文件
-
-真实 API Key 保存位置：
+### 常用业务 API
 
 ```text
-.runtime/llm-settings.json
+/api/events
+/api/tasks
+/api/tasks/[id]/schedule
+/api/habits
+/api/focus
+/api/links
+/api/analytics/weekly
+/api/settings/time-policy
+/api/import/time-arrangement
 ```
 
-AI 调用用量保存位置：
+## 运维后台
+
+运维后台与普通用户前端分离。
+
+访问：
 
 ```text
-.runtime/llm-usage.json
+http://localhost:3000/ops
 ```
 
-## 13. 本地 Docker 环境
+主要用于：
 
-基础服务：
+- 查看系统健康
+- 查看数据库状态
+- 查看 Redis / BullMQ 状态
+- 查看调度服务状态
+- 查看用户数量
+- 查看连接日历数量
+- 查看事件数量
+- 查看预约链接数量
+- 查看最近调度作业
+- 查看最近调度决策
+- 配置 DeepSeek API Key
+- 查看 AI 调用次数、token 用量和预估费用
+
+## 项目结构
+
+```text
+reclaim/
+  apps/
+    web/                 Next.js 前端和 BFF API
+    desktop/             Electron 桌面端壳
+  packages/
+    database/            Prisma 数据库层
+    domain/              SmartEvent 领域模型
+    integrations/        Google / Outlook 集成
+    queue/               BullMQ 队列
+    recurrence/          rrule 重复规则
+    temporal/            Temporal 时间工具
+    config/              环境配置
+  services/
+    scheduler/           Python FastAPI 调度服务
+  infra/
+    compose/             Docker Compose
+  scripts/
+    windows/             一键启动、停止、检查、打包、同步脚本
+  docs/                  项目文档
+  app-use/               对外分发目录
+```
+
+## 技术栈
+
+- Monorepo：pnpm workspace + turbo
+- 前端：Next.js App Router + TypeScript + Tailwind CSS + TanStack Query
+- 日历：FullCalendar
+- UI：shadcn/ui 风格组件 + 自定义 Planner UI
+- 数据库：Prisma + PostgreSQL
+- 队列：BullMQ + Redis
+- 日历集成：googleapis + Microsoft Graph JavaScript SDK
+- 重复规则：rrule
+- 时间处理：Temporal polyfill
+- 调度服务：Python + FastAPI + OR-Tools / 启发式规则
+- 桌面端：Electron
+- AI：DeepSeek / OpenAI 兼容 Chat Completions API
+
+## 数据模型
+
+核心抽象是 SmartEvent。
+
+SmartEvent 统一表示：
+
+```text
+TASK、HABIT、FOCUS、MEETING、BUFFER、LINK_HOLD、PTO
+```
+
+关键字段：
+
+```text
+id、type、title、description、startAt、endAt、timezone、priority、status、flexibility、lockState、source、recurrenceRule、dueAt、energyProfile、calendarId、isAllDay、metadata
+```
+
+关联模型包括：
+
+```text
+User、Account、CalendarConnection、ExternalCalendar、ExternalEventMirror、Task、Habit、FocusBlock、MeetingTemplate、SchedulingLink、BufferRule、AvailabilityRule、WorkHourRule、TimePolicy、SchedulingConstraint、SchedulingDecision、RescheduleJob、AnalyticsSnapshot、AuditLog
+```
+
+## 本地基础设施
+
+启动 PostgreSQL 和 Redis：
 
 ```bash
 docker compose -f infra/compose/docker-compose.yml up -d postgres redis
 ```
 
-完整服务也可以通过 compose 构建：
+完整 compose：
 
 ```bash
 docker compose -f infra/compose/docker-compose.yml up --build
@@ -591,17 +498,19 @@ docker compose -f infra/compose/docker-compose.yml up --build
 
 默认端口：
 
-- PostgreSQL：`5432`
-- Redis：`6379`
-- Web：`3000`
-- Scheduler：`8000`
+```text
+PostgreSQL：5432
+Redis：6379
+Web：3000
+Scheduler：8000
+```
 
-## 14. 测试与构建
+## 测试与构建
 
-全量测试：
+Web 类型检查：
 
 ```bash
-pnpm test
+pnpm --filter @reclaim/web typecheck
 ```
 
 Web 测试：
@@ -610,33 +519,23 @@ Web 测试：
 pnpm --filter @reclaim/web test
 ```
 
-类型检查：
-
-```bash
-pnpm typecheck
-```
-
-Web 类型检查：
-
-```bash
-pnpm --filter @reclaim/web typecheck
-```
-
-构建：
-
-```bash
-pnpm build
-```
-
 Web 构建：
 
 ```bash
 pnpm --filter @reclaim/web build
 ```
 
-## 15. EXE 打包与分发
+全仓命令：
 
-构建 app-use 分发包：
+```bash
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+## EXE 打包
+
+生成对外分发文件夹：
 
 ```bat
 scripts\windows\build-app-use.cmd
@@ -648,19 +547,24 @@ scripts\windows\build-app-use.cmd
 npm run app-use:build
 ```
 
-执行后会将最新 exe 与中文教程同步到：
+输出目录：
 
 ```text
 app-use/
 ```
 
-可把整个 `app-use` 文件夹发给别人。
+其中包含：
 
-注意：exe 是桌面壳，仍需要本机服务正常启动。若目标电脑首次使用，建议先按 README 完成依赖和环境初始化。
+```text
+Reclaim-Time-Manager-0.1.0-x64.exe
+中文软件使用教程.md
+```
 
-## 16. GitHub 上传与同步
+注意：exe 是桌面壳。目标电脑仍需要本地服务和依赖环境正常，或者需要提前按 README 初始化。
 
-普通推送：
+## GitHub 同步
+
+普通方式：
 
 ```bash
 git add .
@@ -668,119 +572,121 @@ git commit -m "你的提交说明"
 git push origin main
 ```
 
-项目提供一键同步脚本：
+项目脚本：
 
 ```bat
 scripts\windows\git-sync.cmd
 ```
 
-或：
+如果提示 Git 身份未配置：
 
 ```bash
-npm run git:sync
+git config user.name "你的 GitHub 用户名"
+git config user.email "你的 GitHub 邮箱"
 ```
 
-如果提示未配置 Git 身份：
-
-```bash
-git config user.name "你的GitHub用户名"
-git config user.email "你的GitHub noreply邮箱"
-```
-
-如果 GitHub 443 网络不通：
+如果推送失败，先检查网络：
 
 ```powershell
 Test-NetConnection github.com -Port 443
 ```
 
-如果暂存区混入缓存或构建产物：
+## 常见问题
 
-```bash
-git rm -r --cached .turbo .next .runtime apps/desktop/dist services/scheduler/.venv
+### 页面还是旧样式
+
+请强制刷新：
+
+```text
+Ctrl + F5
 ```
 
-## 17. 常见问题
+或者清理缓存并重启：
 
-### 1. 页面打不开
+```powershell
+scripts\windows\stop-maintenance.cmd
+Remove-Item -Recurse -Force apps\web\.next
+scripts\windows\start-maintenance.cmd
+```
 
-先检查服务状态：
+### 页面打不开
+
+检查服务：
 
 ```bat
 scripts\windows\status-maintenance.cmd
 ```
 
-然后重启：
+重启服务：
 
 ```bat
 scripts\windows\stop-maintenance.cmd
 scripts\windows\start-maintenance.cmd
 ```
 
-### 2. 调度服务不可用
+### 调度服务打不开
 
-打开：
+访问：
 
 ```text
 http://localhost:8000/health
 ```
 
-如果打不开，检查 Python 3.11+ 是否安装，并重新运行启动脚本。
+如果不可用，重新运行启动脚本。脚本会使用 `services/scheduler/.venv` 虚拟环境。
 
-### 3. Redis 队列降级
-
-如果 Redis 版本过低，后台会显示队列 degraded。系统仍可执行直接调度，但 BullMQ 队列能力会降级。推荐使用 `infra/compose/docker-compose.yml` 中的 Redis 7。
-
-### 4. AI 调用失败
+### AI 调用失败
 
 检查：
 
-- `/ops` 中是否已保存 DeepSeek API Key
+- 运维后台是否保存 API Key
 - 模型名是否正确
-- 接口地址是否正确
-- 余额或额度是否可用
-- 网络是否能访问 DeepSeek API
+- API URL 是否正确
+- 网络是否能访问 DeepSeek
+- 账号余额或额度是否正常
 
-即使 AI 调用失败，系统也会自动回退到本地规则重排。
+AI 失败时会自动回退本地规则重排。
 
-### 5. 乱码或页面样式异常
+### Redis 队列降级
 
-建议：
+如果 Redis 版本过低，后台可能显示队列 degraded。直接调度仍可用，但异步队列会降级。推荐使用 compose 中的 Redis 7。
 
-```bat
-scripts\windows\stop-maintenance.cmd
-scripts\windows\start-maintenance.cmd
+## 不会上传到 GitHub 的内容
+
+```text
+.env
+.env.local
+.runtime/
+node_modules/
+.next/
+.turbo/
+services/scheduler/.venv/
+apps/desktop/dist/
+*.log
+*.pid
 ```
 
-必要时清理 Next 缓存：
+## 产品优势
 
-```powershell
-Remove-Item -Recurse -Force apps\web\.next
-```
+- 核心是动态调度，不是普通日历皮肤。
+- AI 做策略建议，规则引擎负责执行，稳定性更高。
+- DeepSeek Key 可在后台配置，并能统计用量。
+- 前端应用与运维后台分离，适合后续运营。
+- 支持本地规则兜底，不依赖 AI 才能运行。
+- 支持虚拟环境，方便换电脑运行。
+- Monorepo 分层清晰，便于继续维护和扩展。
+- 保留 Google Calendar、Outlook Calendar、BullMQ、Prisma、FastAPI、OR-Tools 的扩展基础。
 
-然后重新启动。
+## 后续规划
 
-## 18. 当前版本优势
+- 将 `/planner` 原型数据完全切换为数据库真实数据
+- 完善 Google / Outlook 双向同步
+- 增强 OR-Tools 约束求解
+- 增加团队协作与成员权限
+- 增强课程表、排班表、PDF、Word、图片识别导入
+- 完善桌面端离线启动体验
+- 增加更多时间分析维度和成本控制
+- 增加移动端适配
 
-- 不是简单日历，而是围绕动态重排设计。
-- AI 不直接接管系统，降低失控风险。
-- 本地规则引擎可兜底，保证稳定性。
-- 运维后台与用户前端分离，便于后续运营。
-- API Key 可在后台配置，并统计用量与费用。
-- 支持虚拟环境运行，换电脑更容易复现。
-- 使用 Prisma、BullMQ、FastAPI、FullCalendar 等主流技术，后续扩展空间更大。
-- 代码结构按 monorepo 分层，便于维护和继续开发。
+## 说明
 
-## 19. 后续可扩展方向
-
-- 多用户账号体系与权限管理
-- 团队日历聚合
-- 更完整 Google/Outlook 双向同步
-- 更强 OR-Tools 约束求解
-- 移动端适配
-- 更细的费用统计和 API 限额控制
-- 调度策略可视化编辑器
-- 课程表/工作排班等更多导入模板
-
-## 20. 许可证与说明
-
-本项目是一个 Reclaim AI 风格的动态时间管理平台 MVP。它没有 fork 或运行时依赖 Cal.com，也不把 Cal.com 作为交付基础。项目使用独立数据模型和调度服务实现，可用于本地学习、原型验证和后续产品化开发。
+本项目是 Reclaim AI 风格的动态时间管理平台 MVP。项目没有 fork Cal.com，也不把 Cal.com 作为运行时依赖。当前代码以独立数据模型、独立调度接口和独立本地服务实现，适合继续产品化开发。
