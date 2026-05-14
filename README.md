@@ -190,10 +190,11 @@ npm run maintenance:status
 4. 点击或框选时间段，创建任务、计划或事件。
 5. 为时间记录选择类别标签，例如学习、工作、娱乐、会议、运动、个人、通勤、休息等。
 6. 如果任务延迟、拖动时间块或点击“干不下去了”，触发动态重排。
-7. 系统优先尝试 AI 策略建议；失败时自动使用本地规则重排。
-8. 在分析页查看时间分配、专注时间、会议占比、任务完成情况。
-9. 在设置页调整工作时间、可用时间、时间策略。
-10. 在运维后台查看系统健康、调度记录、AI 用量和费用估算。
+7. 如需体验更接近 Reclaim 的 Planner 工作台，可以进入 `/planner`。
+8. 系统优先尝试 AI 策略建议；失败时自动使用本地规则重排。
+9. 在分析页查看时间分配、专注时间、会议占比、任务完成情况。
+10. 在设置页调整工作时间、可用时间、时间策略。
+11. 在运维后台查看系统健康、调度记录、AI 用量和费用估算。
 
 ## 7. 页面说明
 
@@ -217,6 +218,20 @@ npm run maintenance:status
 - 支持点击或选择时间段创建任务/事件。
 - 支持给时间块添加类别标签和个性化标签。
 - 支持拖动时间块触发动态重排。
+
+### AI Planner `/planner`
+
+AI Planner 是从 `feature/planner-web-integration` 分支合入的新版 Planner 工作台。它保留了现有主线的后端能力，同时新增更完整的前端交互原型：
+
+- 类 Reclaim 的 Planner 视觉布局。
+- 左侧模块导航，右侧任务面板。
+- 周视图时间网格。
+- 时间块拖动与恢复体验。
+- “干不下去了”重排入口。
+- 任务、习惯、专注、会议、缓冲等模块化展示。
+- 与 `/api/scheduling/replan` 对接，可继续使用 DeepSeek 或本地规则引擎。
+
+说明：该页面目前是集成型 Planner 原型，用于验证交互流程和视觉方向；主数据仍以现有 SmartEvent、任务、日历和调度 API 为准，后续可以逐步替换原型 mock 数据为真实数据库数据。
 
 ### 预约链接 `/links`
 
@@ -461,6 +476,16 @@ POST /api/scheduling/llm-replan
 }
 ```
 
+### Planner 页面重排触发
+
+`/planner` 页面中的拖动、任务恢复、“干不下去了”等操作会通过前端 replan client 调用统一重排能力。主入口仍是：
+
+```http
+POST /api/scheduling/replan
+```
+
+这样可以保证 Planner UI 不直接写死调度逻辑，而是复用后端 AI + 本地规则的调度链路。
+
 ### 规则维护接口
 
 ```http
@@ -512,7 +537,10 @@ POST /api/admin/llm-settings
 - `/api/habits`
 - `/api/focus`
 - `/api/scheduling/recompute`
+- `/api/scheduling/replan`
 - `/api/scheduling/dynamic-replan`
+- `/api/scheduling/llm-replan`
+- `/api/scheduling/llm-rules`
 - `/api/scheduling/event-replan`
 - `/api/scheduling/event-replan/undo`
 - `/api/scheduling/preview`
