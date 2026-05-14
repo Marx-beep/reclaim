@@ -1465,7 +1465,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-[var(--color-bg-page)] text-[var(--color-text-primary)]">
+    <div className="h-screen overflow-hidden bg-[#eef3f8] text-[var(--color-text-primary)]">
       <div className="flex h-full">
         <Sidebar
           activeSection={activeSection}
@@ -1477,7 +1477,9 @@ export default function App() {
           onOpenProfile={() => setProfileOpen(true)}
         />
 
-        <main className="flex min-w-0 flex-1 flex-col bg-[var(--color-bg-page)]">{renderMainContent()}</main>
+        <main className="flex min-w-0 flex-1 flex-col bg-[linear-gradient(180deg,#f8fbff_0%,#eef3f8_100%)]">
+          {renderMainContent()}
+        </main>
 
         <RightTaskPanel
           isOpen={isPanelOpen}
