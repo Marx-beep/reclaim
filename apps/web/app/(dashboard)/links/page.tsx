@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardTitle } from "@/components/shared/card";
 import { Button } from "@/components/shared/button";
 import { Input } from "@/components/shared/input";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { apiFetch } from "@/lib/api/client";
 import { t } from "@/lib/i18n";
 
@@ -120,37 +121,60 @@ export default function LinksPage() {
 
   return (
     <div className="space-y-4">
+      <PageHeader
+        title={copy.title}
+        badges={
+          linksQuery.data && linksQuery.data.length > 0 ? (
+            <span className="rounded-full bg-[var(--color-btn-primary-light)] px-2 py-0.5 text-xs font-medium text-[var(--color-btn-primary-text)]">
+              {linksQuery.data.length} 个链接
+            </span>
+          ) : undefined
+        }
+      />
+
       <Card>
         <CardTitle>{copy.create}</CardTitle>
         <CardContent>
           <form className="grid gap-3 md:grid-cols-3" onSubmit={onCreate}>
-            <label className="text-sm">
+            <label className="text-sm text-[var(--color-text-secondary)]">
               {copy.title}
-              <Input value={title} onChange={(event) => setTitle(event.target.value)} />
+              <div className="mt-1">
+                <Input value={title} onChange={(event) => setTitle(event.target.value)} />
+              </div>
             </label>
-            <label className="text-sm">
+            <label className="text-sm text-[var(--color-text-secondary)]">
               {copy.slug}
-              <Input value={slug} onChange={(event) => setSlug(event.target.value)} />
+              <div className="mt-1">
+                <Input value={slug} onChange={(event) => setSlug(event.target.value)} />
+              </div>
             </label>
-            <label className="text-sm">
+            <label className="text-sm text-[var(--color-text-secondary)]">
               {copy.duration}
-              <Input type="number" value={durationMinutes} onChange={(event) => setDurationMinutes(Number(event.target.value))} />
+              <div className="mt-1">
+                <Input type="number" value={durationMinutes} onChange={(event) => setDurationMinutes(Number(event.target.value))} />
+              </div>
             </label>
-            <label className="text-sm">
+            <label className="text-sm text-[var(--color-text-secondary)]">
               {copy.notice}
-              <Input type="number" value={noticeMinutes} onChange={(event) => setNoticeMinutes(Number(event.target.value))} />
+              <div className="mt-1">
+                <Input type="number" value={noticeMinutes} onChange={(event) => setNoticeMinutes(Number(event.target.value))} />
+              </div>
             </label>
-            <label className="text-sm">
+            <label className="text-sm text-[var(--color-text-secondary)]">
               {copy.minHours}
-              <Input
-                type="number"
-                value={minSchedulingHours}
-                onChange={(event) => setMinSchedulingHours(Number(event.target.value))}
-              />
+              <div className="mt-1">
+                <Input
+                  type="number"
+                  value={minSchedulingHours}
+                  onChange={(event) => setMinSchedulingHours(Number(event.target.value))}
+                />
+              </div>
             </label>
-            <label className="text-sm">
+            <label className="text-sm text-[var(--color-text-secondary)]">
               {copy.maxDays}
-              <Input type="number" value={maxSchedulingDays} onChange={(event) => setMaxSchedulingDays(Number(event.target.value))} />
+              <div className="mt-1">
+                <Input type="number" value={maxSchedulingDays} onChange={(event) => setMaxSchedulingDays(Number(event.target.value))} />
+              </div>
             </label>
             <div className="md:col-span-3">
               <Button type="submit" disabled={createMutation.isPending}>
@@ -164,13 +188,13 @@ export default function LinksPage() {
       <Card>
         <CardTitle>{copy.activeLinks}</CardTitle>
         <CardContent className="space-y-2 text-sm">
-          {(linksQuery.data ?? []).length === 0 ? <div className="text-slate-500">{copy.noLinks}</div> : null}
+          {(linksQuery.data ?? []).length === 0 ? <div className="text-[var(--color-text-muted)]">{copy.noLinks}</div> : null}
           {(linksQuery.data ?? []).map((link) => (
-            <div key={link.id} className="rounded border p-2">
-              <div className="font-medium">
+            <div key={link.id} className="rounded-lg border border-[var(--color-border-subtle)] p-3">
+              <div className="font-medium text-[var(--color-text-primary)]">
                 {link.title} ({link.durationMinutes}m)
               </div>
-              <div className="text-xs text-slate-500">/{link.slug}</div>
+              <div className="text-xs text-[var(--color-text-muted)]">/{link.slug}</div>
             </div>
           ))}
         </CardContent>
@@ -180,10 +204,10 @@ export default function LinksPage() {
         <CardTitle>{copy.availability}</CardTitle>
         <CardContent className="space-y-3">
           <div className="grid gap-2 md:grid-cols-4">
-            <label className="text-sm md:col-span-2">
+            <label className="text-sm text-[var(--color-text-secondary)] md:col-span-2">
               {copy.linkLabel}
               <select
-                className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-sm"
+                className="mt-1 h-10 w-full rounded-lg border border-[var(--color-border-default)] bg-white px-2 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[rgba(111,109,184,0.2)]"
                 value={effectiveSlug}
                 onChange={(event) => setSelectedSlug(event.target.value)}
               >
@@ -194,13 +218,17 @@ export default function LinksPage() {
                 ))}
               </select>
             </label>
-            <label className="text-sm">
+            <label className="text-sm text-[var(--color-text-secondary)]">
               {copy.from}
-              <Input type="datetime-local" value={fromAt} onChange={(event) => setFromAt(event.target.value)} />
+              <div className="mt-1">
+                <Input type="datetime-local" value={fromAt} onChange={(event) => setFromAt(event.target.value)} />
+              </div>
             </label>
-            <label className="text-sm">
+            <label className="text-sm text-[var(--color-text-secondary)]">
               {copy.to}
-              <Input type="datetime-local" value={toAt} onChange={(event) => setToAt(event.target.value)} />
+              <div className="mt-1">
+                <Input type="datetime-local" value={toAt} onChange={(event) => setToAt(event.target.value)} />
+              </div>
             </label>
           </div>
           <Button variant="secondary" onClick={() => loadAvailability.mutate()} disabled={loadAvailability.isPending}>
@@ -208,18 +236,18 @@ export default function LinksPage() {
           </Button>
 
           <div className="space-y-2 text-sm">
-            {availability && visibleSlots.length === 0 ? <div className="text-slate-500">{copy.noSlots}</div> : null}
+            {availability && visibleSlots.length === 0 ? <div className="text-[var(--color-text-muted)]">{copy.noSlots}</div> : null}
             {visibleSlots.map((slot) => (
-              <div key={slot} className="flex items-center justify-between rounded border p-2">
-                <span>{new Date(slot).toLocaleString("zh-CN")}</span>
-                <Button variant="secondary" onClick={() => bookMutation.mutate(slot)} disabled={bookMutation.isPending}>
+              <div key={slot} className="flex items-center justify-between rounded-lg border border-[var(--color-border-subtle)] p-2">
+                <span className="text-[var(--color-text-secondary)]">{new Date(slot).toLocaleString("zh-CN")}</span>
+                <Button variant="secondary" size="sm" onClick={() => bookMutation.mutate(slot)} disabled={bookMutation.isPending}>
                   {copy.bookFirst}
                 </Button>
               </div>
             ))}
           </div>
 
-          {feedback ? <div className="text-sm text-slate-600">{feedback}</div> : null}
+          {feedback ? <div className="text-sm text-[var(--color-text-secondary)]">{feedback}</div> : null}
         </CardContent>
       </Card>
     </div>
