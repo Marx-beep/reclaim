@@ -245,11 +245,11 @@ export function RightTaskPanel({
 
   if (!isOpen) {
     return (
-      <aside className="flex h-full w-[72px] shrink-0 flex-col items-center justify-between border-l border-[var(--color-border-default)] bg-white px-3 py-5">
-        <button type="button" onClick={onOpen} className="rounded-2xl border border-[var(--color-border-default)] bg-white px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] shadow-[0_2px_8px_rgba(15,23,42,0.06)] transition hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-lighter)] hover:text-[var(--color-primary-text)]">
+      <aside className="flex h-full w-[72px] shrink-0 flex-col items-center justify-between border-l border-[var(--color-border-default)] bg-[#F7F8FC] px-3 py-5">
+        <button type="button" onClick={onOpen} className="rounded-2xl border border-[var(--color-border-default)] bg-white px-3 py-2 text-[12px] font-semibold text-[var(--color-text-secondary)] shadow-[0_1px_4px_rgba(17,19,24,0.06)] transition hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-lighter)] hover:text-[var(--color-primary-text)]">
           展开
         </button>
-        <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] px-2 py-3 text-center shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
+        <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-white px-2 py-3 text-center shadow-[0_1px_4px_rgba(17,19,24,0.04)]">
           <div className="text-[15px] font-semibold text-[var(--color-text-primary)]">{todayTasks.length}</div>
           <div className="mt-1 text-[11px] text-[var(--color-text-muted)]">今日</div>
         </div>
@@ -258,7 +258,7 @@ export function RightTaskPanel({
   }
 
   return (
-    <aside className="flex h-full w-[340px] shrink-0 flex-col border-l border-[var(--color-border-subtle)] bg-[var(--color-bg-page)]">
+    <aside className="flex h-full w-[340px] shrink-0 flex-col border-l border-[var(--color-border-default)] bg-[#F7F8FC]">
       <div className="planner-side-scroll flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 pr-3">
         <section className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] px-4 py-3 shadow-[0_1px_4px_rgba(15,23,42,0.05)]">
           <div>
@@ -292,156 +292,6 @@ export function RightTaskPanel({
 
         {panelView === "plan" ? (
           <>
-            <section className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)] p-4 shadow-[0_1px_4px_rgba(15,23,42,0.04)]">
-              <div className="mb-3 text-[13px] font-semibold text-[var(--color-text-primary)]">快速添加</div>
-              <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    onAddTask({ title, durationHours, priority, dueDay, dueHour, urgent, energyLevel });
-                    setTitle("");
-                  }
-                }}
-                placeholder="输入任务名称，回车添加..."
-                className="w-full rounded-xl border border-[var(--color-border-default)] bg-white px-3 py-2.5 text-[13px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-lighter)]"
-              />
-
-              {selectedSlot ? (
-                <div className="mt-2 flex items-center justify-between rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary-lighter)] px-3 py-2 text-[12px] text-[var(--color-primary-text)]">
-                  <span className="flex items-center gap-1.5">
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    安排到 {focusedDayLabel} {formatTime(selectedSlot.startHour)}
-                  </span>
-                  <button type="button" className="font-medium hover:opacity-75" onClick={onClearSelectedSlot}>清除</button>
-                </div>
-              ) : null}
-
-              <div className="mt-3 space-y-3">
-                <div>
-                  <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-[var(--color-text-muted)]">
-                    <span>时长</span>
-                    <span className="rounded-full bg-[var(--color-primary-lighter)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary-text)]">{durationHours.toFixed(durationHours % 1 === 0 ? 0 : 2)} 小时</span>
-                  </div>
-                  <div className="rounded-xl border border-[var(--color-border-subtle)] bg-white px-3 py-2">
-                    <input type="range" min={0.25} max={4} step={0.25} value={durationHours} onChange={(event) => setDurationHours(Number(event.target.value))} className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[var(--color-border-default)] accent-[var(--color-primary)]" />
-                    <div className="mt-1.5 flex items-center justify-between text-[10px] text-[var(--color-text-muted)]">
-                      <span>15 分钟</span>
-                      <span>4 小时</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="mb-1.5 text-[11px] font-medium text-[var(--color-text-muted)]">截止日期</div>
-                    <input
-                      type="date"
-                      value={format(addDays(weekStart, dueDay), "yyyy-MM-dd")}
-                      min={format(weekStart, "yyyy-MM-dd")}
-                      max={format(addDays(weekStart, 13), "yyyy-MM-dd")}
-                      onChange={(e) => {
-                        const selected = new Date(e.target.value + "T00:00:00");
-                        const diffMs = selected.getTime() - weekStart.getTime();
-                        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-                        setDueDay(Math.max(0, Math.min(6, diffDays)));
-                      }}
-                      className="w-full rounded-xl border border-[var(--color-border-default)] bg-white px-2 py-2 text-[12px] text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-lighter)]"
-                    />
-                  </div>
-                  <div className="relative" ref={timePickerRef}>
-                    <div className="mb-1.5 text-[11px] font-medium text-[var(--color-text-muted)]">截止时刻</div>
-                    <button
-                      type="button"
-                      onClick={() => setTimePickerOpen(!timePickerOpen)}
-                      className="flex w-full items-center justify-between rounded-xl border border-[var(--color-border-default)] bg-white px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-lighter)]"
-                    >
-                      <span className="tabular-nums">{String(dueHourInt).padStart(2, "0")}:{String(dueMinute).padStart(2, "0")}</span>
-                      <Clock className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
-                    </button>
-                    {timePickerOpen && (
-                      <div className="absolute left-0 right-0 top-full z-30 mt-1 rounded-xl border border-[var(--color-border-subtle)] bg-white p-3 shadow-lg">
-                        <div className="space-y-2.5">
-                          <div>
-                            <div className="mb-1 flex items-center justify-between text-[10px] text-[var(--color-text-muted)]">
-                              <span>时</span>
-                              <span className="tabular-nums font-medium text-slate-700">{String(dueHourInt).padStart(2, "0")} 时</span>
-                            </div>
-                            <input
-                              type="range" min={0} max={23} step={1}
-                              value={dueHourInt}
-                              onChange={(e) => setDueTime(Number(e.target.value), dueMinute)}
-                              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-[var(--color-primary)]"
-                            />
-                          </div>
-                          <div>
-                            <div className="mb-1 flex items-center justify-between text-[10px] text-[var(--color-text-muted)]">
-                              <span>分</span>
-                              <span className="tabular-nums font-medium text-slate-700">{String(dueMinute).padStart(2, "0")} 分</span>
-                            </div>
-                            <input
-                              type="range" min={0} max={59} step={1}
-                              value={dueMinute}
-                              onChange={(e) => setDueTime(dueHourInt, Number(e.target.value))}
-                              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-emerald-500"
-                            />
-                          </div>
-                        </div>
-                        <div className="mt-2 border-t border-[var(--color-border-subtle)] pt-2 text-center text-[11px] tabular-nums font-semibold text-[var(--color-primary)]">
-                          {String(dueHourInt).padStart(2, "0")}:{String(dueMinute).padStart(2, "0")}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-1.5 text-[11px] font-medium text-[var(--color-text-muted)]">优先级</div>
-                  <div className="flex gap-1">
-                    {priorityOptions.map((option) => (
-                      <button key={option} type="button" onClick={() => setPriority(option)} className={`whitespace-nowrap flex-1 rounded-lg px-2 py-1.5 text-[11px] font-medium transition ${priority === option ? "bg-[var(--color-btn-solid)] text-white" : "border border-[var(--color-border-subtle)] bg-white text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"}`}>
-                        {priorityLabel(option)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-1.5 text-[11px] font-medium text-[var(--color-text-muted)]">精力需求</div>
-                  <div className="flex gap-1.5">
-                    {(["high", "medium", "low"] as const).map((option) => (
-                      <button key={option} type="button" onClick={() => setEnergyLevel(option)} className={`flex-1 rounded-lg py-1.5 text-[11px] font-medium transition ${energyLevel === option ? "bg-[var(--color-btn-primary)] text-white" : "border border-[var(--color-border-subtle)] bg-white text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"}`}>
-                        {energyLabel(option)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {slotDeadlineHint && (
-                  <div className={`rounded-xl px-3 py-2 text-[11px] leading-relaxed ${slotDeadlineHint.tone === "warn" ? "border border-[var(--color-accent-amber)]/30 bg-[var(--color-accent-amber)]/8 text-[var(--color-accent-amber)]" : "border border-[var(--color-event-focus)]/30 bg-[var(--color-event-focus-light)] text-[var(--color-event-focus-text)]"}`}>
-                    {slotDeadlineHint.message}
-                  </div>
-                )}
-
-                <label className="flex items-center gap-2 rounded-xl border border-[var(--color-border-subtle)] bg-white px-3 py-2 text-[12px] text-[var(--color-text-secondary)]">
-                  <input type="checkbox" checked={urgent} onChange={(event) => setUrgent(event.target.checked)} className="accent-[var(--color-primary)]" />
-                  标记为紧急，立刻插入最近空档
-                </label>
-
-                <button
-                  type="button"
-                  className="w-full rounded-xl bg-[var(--color-btn-primary)] py-2.5 text-[13px] font-semibold text-white shadow-[0_2px_8px_rgba(138,136,184,0.30)] transition hover:bg-[var(--color-btn-primary-hover)]"
-                  onClick={() => {
-                    onAddTask({ title, durationHours, priority, dueDay, dueHour, urgent, energyLevel });
-                    setTitle(""); setDurationHours(1); setPriority("P2"); setDueDay(focusedDayIndex); setDueHour(18); setUrgent(false); setEnergyLevel("medium");
-                  }}
-                >
-                  <Plus className="mr-1.5 inline h-4 w-4" />
-                  加入日程
-                </button>
-              </div>
-            </section>
-
             <section className="rounded-2xl border border-[var(--color-border-subtle)] bg-white p-4">
               <div className="mb-2.5 text-[13px] font-semibold text-[var(--color-text-primary)]">{focusedDayLabel} 优先事项</div>
               <div className="space-y-3">
@@ -564,7 +414,7 @@ export function RightTaskPanel({
               </div>
             ) : null}
 
-            {latestSummary && <div className="rounded-xl border border-[var(--color-event-task)]/20 bg-[var(--color-event-task-light)] px-3 py-2 text-[12px] text-[var(--color-event-task)]">{latestSummary}</div>}
+            {latestSummary && <div className="rounded-xl border border-[#EB6A67]/30 bg-[#F7D9DE] px-3 py-2.5 text-[12px] leading-relaxed text-[#111318]">{latestSummary}</div>}
             {latestWarnings.length > 0 && <div className="rounded-xl border border-[var(--color-accent-amber)]/30 bg-[var(--color-accent-amber)]/8 px-3 py-2 text-[12px] text-[var(--color-accent-amber)]">{latestWarnings.map((w) => <div key={w}>· {w}</div>)}</div>}
             {unscheduledTasks.length > 0 && <div className="rounded-xl border border-[var(--color-accent-rose)]/20 bg-[var(--color-accent-rose)]/5 px-3 py-2 text-[12px] text-[var(--color-accent-rose)]">以下任务仍未安排：{unscheduledTasks.map((t) => t.title).join("、")}</div>}
 

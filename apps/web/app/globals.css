@@ -5,67 +5,75 @@
 :root {
   color-scheme: light;
 
-  --color-primary: #E8B89A;
-  --color-primary-light: #F2CFBB;
-  --color-primary-lighter: #FDF5F1;
-  --color-primary-dark: #D4846A;
-  --color-primary-text: #8B5A42;
+  /* ===== 主色调系统 (蓝紫色系) ===== */
+  --color-primary: #5865F2;
+  --color-primary-light: #7B83EC;
+  --color-primary-lighter: #EEF0FF;
+  --color-primary-dark: #4F5BEF;
+  --color-primary-text: #2D3582;
 
-  --color-bg-page: #FAF8F6;
-  --color-bg-page-subtle: #F5F1EE;
+  /* ===== 背景色系统 ===== */
+  --color-bg-page: #F7F8FC;
+  --color-bg-page-subtle: #F5F6FA;
   --color-bg-surface: #FFFFFF;
-  --color-bg-raised: #FDFCFB;
+  --color-bg-raised: #FFFFFF;
 
-  --color-text-primary: #3D3D3D;
-  --color-text-secondary: #6B6560;
-  --color-text-muted: #9D9590;
+  /* ===== 文字色系统 ===== */
+  --color-text-primary: #111318;
+  --color-text-secondary: #4B5563;
+  --color-text-muted: #8A8D99;
 
-  --color-border-subtle: rgba(180, 170, 162, 0.12);
-  --color-border-default: rgba(180, 170, 162, 0.22);
-  --color-border-strong: rgba(150, 140, 132, 0.32);
+  /* ===== 边框/线条色系统 ===== */
+  --color-border-subtle: rgba(228, 230, 238, 0.60);
+  --color-border-default: #E4E6EE;
+  --color-border-strong: #D1D4DB;
 
-  --color-event-task: #ABD7FB;
-  --color-event-task-light: #EEF6FD;
-  --color-event-task-text: #5A7A9A;
-  --color-event-focus: #D2E0AA;
-  --color-event-focus-light: #F2F6E8;
-  --color-event-focus-text: #5A7050;
-  --color-event-habit: #D2E0AA;
-  --color-event-habit-light: #F2F6E8;
-  --color-event-meeting: #FCCEB4;
-  --color-event-meeting-light: #FDF5F1;
-  --color-event-meeting-text: #8B6050;
-  --color-event-break: #E8E4E0;
-  --color-event-break-light: #F5F3F1;
-  --color-event-complete: #C5D4A3;
-  --color-event-complete-light: #F3F7E8;
+  /* ===== 事件块颜色系统 (日程块底色) ===== */
+  --color-event-task: #F7D9DE;           /* 浅粉色 - Task/Personal */
+  --color-event-task-light: #FDF2F4;
+  --color-event-task-text: #111318;
+  --color-event-focus: #BDE6D1;          /* 柔和绿色 - Focus time */
+  --color-event-focus-light: #EDFAF3;
+  --color-event-focus-text: #111318;
+  --color-event-habit: #FFE4A8;          /* 浅黄色 - Habit/午餐 */
+  --color-event-habit-light: #FFFBF0;
+  --color-event-meeting: #A8B3F4;        /* 日程蓝紫 - Meeting */
+  --color-event-meeting-light: #EEF0FF;
+  --color-event-meeting-text: #111318;
+  --color-event-break: #EB6A67;           /* 主红色 - 锁定/重要 */
+  --color-event-break-light: #FDF2F2;
+  --color-event-complete: #CBEEDD;        /* 浅绿色 - 已完成 */
+  --color-event-complete-light: #F0FAF5;
 
-  --shadow-card: 0 2px 8px rgba(100, 90, 82, 0.06), 0 1px 2px rgba(100, 90, 82, 0.04);
-  --shadow-hover: 0 8px 24px rgba(100, 90, 82, 0.10), 0 2px 6px rgba(100, 90, 82, 0.06);
-  --shadow-modal: 0 20px 60px rgba(100, 90, 82, 0.14), 0 8px 20px rgba(100, 90, 82, 0.08);
-  --shadow-focus: 0 0 0 2px rgba(171, 215, 251, 0.45);
+  /* ===== 阴影系统 (专业黑色阴影) ===== */
+  --shadow-card: 0 1px 3px rgba(17, 19, 24, 0.04), 0 1px 2px rgba(17, 19, 24, 0.02);
+  --shadow-hover: 0 4px 12px rgba(17, 19, 24, 0.08), 0 2px 4px rgba(17, 19, 24, 0.04);
+  --shadow-modal: 0 20px 50px rgba(17, 19, 24, 0.15), 0 8px 20px rgba(17, 19, 24, 0.08);
+  --shadow-focus: 0 0 0 2px rgba(88, 101, 242, 0.30);
 
-  --color-btn-primary: #E8B89A;
-  --color-btn-primary-hover: #D4846A;
-  --color-btn-primary-light: #FDF5F1;
-  --color-btn-primary-text: #8B5A42;
-  --color-btn-solid: #9DB4C0;
-  --color-btn-solid-hover: #7A9AAD;
-  --color-btn-solid-light: #EDF4F7;
-  --color-btn-solid-text: #4A6670;
-  --color-btn-ghost: #F5F1EE;
-  --color-btn-ghost-hover: #EDE6E1;
-  --color-btn-ghost-text: #6B5D55;
+  /* ===== 按钮色系统 ===== */
+  --color-btn-primary: #5865F2;
+  --color-btn-primary-hover: #4F5BEF;
+  --color-btn-primary-light: #EEF0FF;
+  --color-btn-primary-text: #FFFFFF;
+  --color-btn-solid: #4B5563;
+  --color-btn-solid-hover: #3D4452;
+  --color-btn-solid-light: #F5F6FA;
+  --color-btn-solid-text: #FFFFFF;
+  --color-btn-ghost: #F7F8FC;
+  --color-btn-ghost-hover: #EEF0FF;
+  --color-btn-ghost-text: #4B5563;
 
-  --color-priority-high: #E8B89A;
-  --color-priority-high-light: #FDF5F1;
-  --color-priority-high-text: #8B5A42;
+  /* ===== 强调色/功能色系统 ===== */
+  --color-priority-high: #EB6A67;
+  --color-priority-high-light: #FDF2F2;
+  --color-priority-high-text: #7A2522;
 
-  --color-accent-blue: #ABD7FB;
-  --color-accent-green: #D2E0AA;
-  --color-accent-amber: #FCCEB4;
-  --color-accent-coral: #F98C53;
-  --color-accent-slate: #B8C4CE;
+  --color-accent-blue: #A8B3F4;           /* 日程蓝紫 */
+  --color-accent-green: #6CC48D;          /* 主绿色 */
+  --color-accent-amber: #FFE4A8;          /* 浅黄色 */
+  --color-accent-coral: #EB6A67;          /* 主红色 */
+  --color-accent-slate: #8A8D99;          /* 浅灰文字 */
 }
 
 * {
@@ -79,9 +87,16 @@ html {
 }
 
 body {
-  background: linear-gradient(180deg, #FDFCFB 0%, #FAF8F6 40%, #F7F4F2 100%);
+  background: #F7F8FC;
   color: var(--color-text-primary);
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    Inter,
+    "PingFang SC",
+    "HarmonyOS Sans SC",
+    "MiSans",
+    "Noto Sans CJK SC",
+    "Microsoft YaHei",
+    sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -89,14 +104,52 @@ body {
 }
 
 *::selection {
-  background: rgba(232, 184, 154, 0.25);
+  background: rgba(88, 101, 242, 0.15);
   color: var(--color-text-primary);
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Segoe UI Variable Display", "Trebuchet MS", sans-serif;
+h1,
+h2,
+h3,
+.title {
+  font-family:
+    Inter,
+    "PingFang SC",
+    "HarmonyOS Sans SC",
+    "MiSans",
+    "Noto Sans CJK SC",
+    "Microsoft YaHei",
+    sans-serif;
+  font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--color-text-primary);
+}
+
+h4, h5, h6 {
+  font-family:
+    Inter,
+    "PingFang SC",
+    "HarmonyOS Sans SC",
+    "MiSans",
+    "Noto Sans CJK SC",
+    "Microsoft YaHei",
+    sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.stat-number {
+  font-size: 56px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.body-text {
+  font-weight: 400;
+}
+
+.button-text {
   font-weight: 600;
 }
 
@@ -155,14 +208,14 @@ input[type="range"]::-webkit-slider-thumb {
   border: 2px solid #ffffff;
   border-radius: 999px;
   background: var(--color-accent-blue);
-  box-shadow: 0 2px 6px rgba(171, 215, 251, 0.35);
+  box-shadow: 0 2px 6px rgba(168, 179, 244, 0.30);
   cursor: pointer;
   transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.1);
-  box-shadow: 0 4px 10px rgba(171, 215, 251, 0.45);
+  box-shadow: 0 4px 10px rgba(168, 179, 244, 0.40);
 }
 
 input[type="range"]::-webkit-slider-thumb:active {
@@ -181,7 +234,7 @@ input[type="range"]::-moz-range-thumb {
   border: 2px solid #ffffff;
   border-radius: 999px;
   background: var(--color-accent-blue);
-  box-shadow: 0 2px 6px rgba(171, 215, 251, 0.35);
+  box-shadow: 0 2px 6px rgba(168, 179, 244, 0.30);
   cursor: pointer;
 }
 
@@ -193,17 +246,17 @@ input[type="range"]::-moz-range-thumb {
 ::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 999px;
-  background: rgba(180, 170, 162, 0.55);
+  background: rgba(138, 141, 153, 0.35);
   background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(150, 140, 132, 0.72);
+  background: rgba(75, 85, 99, 0.50);
   background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(250, 248, 246, 0.65);
+  background: #F7F8FC;
   border-radius: 999px;
 }
 
@@ -214,7 +267,7 @@ input[type="range"]::-moz-range-thumb {
 .planner-scroll-shell {
   scrollbar-gutter: stable both-edges;
   scrollbar-width: thin;
-  scrollbar-color: rgba(180, 170, 162, 0.62) rgba(250, 248, 246, 0.92);
+  scrollbar-color: rgba(138, 141, 153, 0.40) #F7F8FC;
   scroll-padding-right: 12px;
   scroll-padding-bottom: 12px;
 }
@@ -222,7 +275,7 @@ input[type="range"]::-moz-range-thumb {
 .planner-side-scroll {
   scrollbar-gutter: stable both-edges;
   scrollbar-width: thin;
-  scrollbar-color: rgba(180, 170, 162, 0.62) rgba(250, 248, 246, 0.92);
+  scrollbar-color: rgba(138, 141, 153, 0.40) #F7F8FC;
   scroll-padding-right: 12px;
 }
 
@@ -236,19 +289,19 @@ input[type="range"]::-moz-range-thumb {
 .planner-side-scroll::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
   border-radius: 999px;
-  background: rgba(180, 170, 162, 0.65);
+  background: rgba(138, 141, 153, 0.40);
   background-clip: padding-box;
 }
 
 .planner-scroll-shell::-webkit-scrollbar-thumb:hover,
 .planner-side-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(150, 140, 132, 0.78);
+  background: rgba(75, 85, 99, 0.55);
   background-clip: padding-box;
 }
 
 .planner-scroll-shell::-webkit-scrollbar-track,
 .planner-side-scroll::-webkit-scrollbar-track {
-  background: rgba(250, 248, 246, 0.92);
+  background: #F7F8FC;
   border-radius: 999px;
 }
 
@@ -294,7 +347,7 @@ input[type="range"]::-moz-range-thumb {
 
   .btn-primary:hover {
     background: var(--color-btn-primary-hover);
-    box-shadow: 0 4px 12px rgba(232, 184, 154, 0.35);
+    box-shadow: 0 4px 12px rgba(88, 101, 242, 0.25);
   }
 
   .btn-primary:active {
@@ -318,8 +371,8 @@ input[type="range"]::-moz-range-thumb {
   }
 
   .btn-primary-light:hover {
-    background: rgba(232, 184, 154, 0.18);
-    border-color: rgba(232, 184, 154, 0.40);
+    background: rgba(88, 101, 242, 0.10);
+    border-color: rgba(88, 101, 242, 0.28);
   }
 
   .btn-solid {

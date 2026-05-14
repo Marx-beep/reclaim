@@ -17,6 +17,7 @@ import {
   TasksView
 } from "./components/ModuleViews";
 import { PlannerHeader, type PlannerSummaryCard } from "./components/PlannerHeader";
+import { QuickAddModal } from "./components/QuickAddModal";
 import { RightTaskPanel } from "./components/RightTaskPanel";
 import { Sidebar } from "./components/Sidebar";
 import { Toast } from "./components/Toast";
@@ -152,6 +153,8 @@ export default function App() {
   const [focusedDayIndex, setFocusedDayIndex] = useState(TODAY_INDEX);
   const [helpOpen, setHelpOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [quickAddInitialSlot, setQuickAddInitialSlot] = useState<{ day: number; startHour: number } | null>(null);
 
   const {
     filterState,
@@ -572,24 +575,28 @@ export default function App() {
       return;
     }
 
+    const targetDay = task.targetDay ?? focusedDayIndex;
+    const startHour = task.targetStartHour;
+
     void runReplan(
       {
         kind: task.urgent || task.priority === "P1" ? "add_urgent_task" : "add_task",
         title: trimmed,
         duration: task.durationHours,
         priority: task.priority,
-        dueDay: task.dueDay,
-        dueHour: task.dueHour,
         energyLevel: task.energyLevel,
-        focusDay: selectedSlot?.day ?? focusedDayIndex,
-        day: selectedSlot?.day ?? focusedDayIndex,
-        startHour: selectedSlot?.startHour
+        focusDay: targetDay,
+        day: targetDay,
+        startHour: startHour,
+        pinToSlot: task.pinToSlot
       },
       task.urgent || task.priority === "P1" ? "紧急任务已插入日历" : "新任务已加入日程"
     );
 
     setSelectedSlot(null);
+    setQuickAddInitialSlot(null);
     setIsPanelOpen(true);
+    setIsQuickAddOpen(false);
   };
 
   const handleApplySuggestion = (suggestion: PlannerSuggestion) => {
@@ -784,6 +791,12 @@ export default function App() {
     showToast(`已选择 ${dayNames[day]} ${formatTime(startHour)}`);
   };
 
+  const handleOpenQuickAdd = (day: number, startHour: number) => {
+    setQuickAddInitialSlot({ day, startHour });
+    setFocusedDayIndex(day);
+    setIsQuickAddOpen(true);
+  };
+
   const handleCreateTaskObject = (input: QuickTaskInput) => {
     const title = input.title.trim();
     if (!title) {
@@ -791,13 +804,16 @@ export default function App() {
       return;
     }
 
+    const targetDueDay = input.targetDay ?? focusedDayIndex;
+    const defaultDueHour = 18;
+
     const nextTask: TaskItem = {
       id: generateId("task"),
       title,
       priority: input.priority,
-      dueDate: `2026-05-${String(10 + input.dueDay).padStart(2, "0")} ${formatTime(input.dueHour)}`,
-      dueDay: input.dueDay,
-      dueHour: input.dueHour,
+      dueDate: `2026-05-${String(10 + targetDueDay).padStart(2, "0")} ${formatTime(defaultDueHour)}`,
+      dueDay: targetDueDay,
+      dueHour: defaultDueHour,
       estimatedMinutes: Math.round(input.durationHours * 60),
       remainingMinutes: Math.round(input.durationHours * 60),
       status: "unscheduled",
@@ -809,7 +825,7 @@ export default function App() {
     pushAiLog(
       "添加任务",
       `"${title}"已加入，会在截止前被安排进日程。`,
-      [`${input.priority} · ${dayNames[input.dueDay]} ${formatTime(input.dueHour)}截止`]
+      [`${input.priority} · ${dayNames[targetDueDay]} ${formatTime(defaultDueHour)}截止`]
     );
     showToast("任务已加入");
   };
@@ -1378,6 +1394,7 @@ export default function App() {
                   }}
                   onEventSelect={setSelectedEventId}
                   onEmptySlotSelect={handleOpenSlot}
+                  onOpenQuickAdd={handleOpenQuickAdd}
                   onEventMove={handleEventMove}
                   onEventResize={handleAdjustDuration}
                   onMarkDone={handleMarkDone}
@@ -1465,7 +1482,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-[#eef3f8] text-[var(--color-text-primary)]">
+    <div className="h-screen overflow-hidden bg-[#F7F8FC] text-[var(--color-text-primary)]">
       <div className="flex h-full">
         <Sidebar
           activeSection={activeSection}
@@ -1477,7 +1494,7 @@ export default function App() {
           onOpenProfile={() => setProfileOpen(true)}
         />
 
-        <main className="flex min-w-0 flex-1 flex-col bg-[linear-gradient(180deg,#f8fbff_0%,#eef3f8_100%)]">
+        <main className="flex min-w-0 flex-1 flex-col bg-[#F7F8FC]">
           {renderMainContent()}
         </main>
 
@@ -1581,6 +1598,15 @@ export default function App() {
       />
 
       <Toast message={toast?.message ?? null} />
+
+      <QuickAddModal
+        isOpen={isQuickAddOpen}
+        initialSlot={quickAddInitialSlot}
+        focusedDayIndex={focusedDayIndex}
+        weekStart={weekStart}
+        onClose={() => setIsQuickAddOpen(false)}
+        onAddTask={handleAddTask}
+      />
     </div>
   );
 }

@@ -43,7 +43,7 @@ interface PlannerHeaderProps {
 }
 
 function chromeButtonClass(active = false) {
-  return `inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border px-3 text-[12px] font-medium transition ${
+  return `inline-flex h-9 whitespace-nowrap items-center justify-center gap-1.5 rounded-xl border px-3 text-[12px] font-medium transition ${
     active
       ? "border-[var(--color-primary)]/30 bg-[var(--color-primary-lighter)] text-[var(--color-primary)]"
       : "border-[var(--color-border-default)] bg-white text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]"
@@ -114,10 +114,10 @@ export function PlannerHeader({
 
   return (
     <header className="shrink-0 px-4 pb-3 pt-4">
-      <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-white px-5 py-3.5 shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
+      <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-white px-4 py-3.5 shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
+        <div className="flex flex-nowrap items-center justify-between gap-2">
+          <div className="flex flex-nowrap items-center gap-2 min-w-0 flex-1 overflow-hidden">
+            <div className="flex items-center gap-1 shrink-0">
               <button type="button" onClick={onPrevWeek} className={chromeButtonClass()}>
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -126,12 +126,12 @@ export function PlannerHeader({
               </button>
             </div>
 
-            <div className="px-2">
-              <div className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--color-text-primary)]">{formatPlannerMonth(weekStart)}</div>
-              <div className="text-[11px] text-[var(--color-text-muted)]">{formatWeekRange(weekStart)}</div>
+            <div className="whitespace-nowrap px-1 shrink-0">
+              <div className="whitespace-nowrap text-[18px] font-semibold tracking-[-0.02em] text-[var(--color-text-primary)]">{formatPlannerMonth(weekStart)}</div>
+              <div className="whitespace-nowrap text-[11px] text-[var(--color-text-muted)]">{formatWeekRange(weekStart)}</div>
             </div>
 
-            <div className="relative" ref={calendarRef}>
+            <div className="relative shrink-0" ref={calendarRef}>
               <button
                 type="button"
                 onClick={() => setCalendarOpen(!calendarOpen)}
@@ -153,22 +153,19 @@ export function PlannerHeader({
               )}
             </div>
 
-            <div className="h-8 w-px bg-[var(--color-border-subtle)]" />
+            <div className="h-8 w-px bg-[var(--color-border-subtle)] shrink-0" />
 
-            <div className="flex items-center gap-2">
-              {summaryCards.map((card) => (
-                <div
-                  key={card.label}
-                  className={`inline-flex items-center gap-1 whitespace-nowrap rounded-lg border px-2 py-1 text-[11px] font-medium ${summaryToneClass(card.tone)}`}
-                >
-                  <span className="text-[var(--color-text-muted)]">{card.label}</span>
-                  <span className="font-semibold text-[var(--color-text-primary)]">{card.value}</span>
+            <div className="flex flex-nowrap items-center min-w-0">
+              {summaryCards.map((card, index) => (
+                <div key={card.label} className={`inline-flex flex-nowrap items-center gap-1 whitespace-nowrap px-2 ${index > 0 ? 'border-l border-[var(--color-border-default)]' : ''}`}>
+                  <span className="whitespace-nowrap text-[11px] text-[var(--color-text-muted)]">{card.label}</span>
+                  <span className="whitespace-nowrap text-[11px] font-semibold text-[var(--color-text-primary)]">{card.value}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-nowrap items-center gap-1.5 shrink-0">
             <button type="button" onClick={onToday} className={chromeButtonClass()}>
               今天
             </button>
@@ -200,7 +197,7 @@ export function PlannerHeader({
             <button
               type="button"
               onClick={onAutoSchedule}
-              className="inline-flex h-9 items-center gap-2 rounded-xl bg-[var(--color-btn-primary)] px-4 text-[12px] font-semibold text-white shadow-[0_2px_8px_rgba(138,136,184,0.3)] transition hover:bg-[var(--color-btn-primary-hover)]"
+              className="inline-flex h-9 shrink-0 whitespace-nowrap items-center gap-1.5 rounded-xl bg-[var(--color-btn-primary)] px-3.5 text-[12px] font-semibold text-white shadow-[0_2px_8px_rgba(138,136,184,0.3)] transition hover:bg-[var(--color-btn-primary-hover)]"
             >
               <Sparkles className="h-3.5 w-3.5" />
               {isOptimizing ? "安排中..." : "智能安排"}

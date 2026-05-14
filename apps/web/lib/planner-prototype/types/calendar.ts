@@ -118,10 +118,11 @@ export interface QuickTaskInput {
   title: string;
   durationHours: number;
   priority: EventPriority;
-  dueDay: number;
-  dueHour: number;
   urgent: boolean;
   energyLevel: EnergyLevel;
+  targetDay?: number;
+  targetStartHour?: number;
+  pinToSlot?: boolean;
 }
 
 export interface AiLog {
@@ -205,6 +206,7 @@ export interface ReplanAction {
   dueHour?: number;
   energyLevel?: EnergyLevel;
   focusDay?: number;
+  pinToSlot?: boolean;
 }
 
 export type ReplanChangeType =

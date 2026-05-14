@@ -37,7 +37,7 @@ export interface FilterOptions {
 export const FILTER_OPTIONS: FilterOptions = {
   eventTypes: [
     { value: "focus", label: "专注任务" },
-    { value: "task", label: "其他工作" },
+    { value: "task", label: "个人任务" },
     { value: "meeting", label: "团队会议" },
     { value: "other", label: "其他工作" },
     { value: "free", label: "空闲时间" },

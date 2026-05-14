@@ -12,27 +12,25 @@ interface CalendarEventBlockProps {
   onCannotContinue: () => void;
 }
 
-const typeColors: Record<string, { bg: string; border: string; text: string; accent: string }> = {
-  focus: { bg: "#D2E0AA", border: "#C8DCA0", text: "#5A7050", accent: "#B8C98F" },
-  task: { bg: "#ABD7FB", border: "#C5DEF5", text: "#5A7A9A", accent: "#8BBEE5" },
-  meeting: { bg: "#FCCEB4", border: "#F0CAB4", text: "#8B6050", accent: "#E5A888" },
-  habit: { bg: "#D2E0AA", border: "#C8DCA0", text: "#5A7050", accent: "#B8C98F" },
-  break: { bg: "#E8E4E0", border: "#DDD8D2", text: "#7A7570", accent: "#C9C4BE" },
-  default: { bg: "#D2E0AA", border: "#C8DCA0", text: "#5A7050", accent: "#B8C98F" }
+const priorityColors: Record<EventPriority, { bg: string; border: string; text: string; accent: string }> = {
+  P1: { bg: "#BDE6D1", border: "#9DD8B8", text: "#111318", accent: "#5DBD82" },
+  P2: { bg: "#F7D9DE", border: "#F0C0C8", text: "#111318", accent: "#EB6A67" },
+  P3: { bg: "#A8B3F4", border: "#6D7BEF", text: "#111318", accent: "#4F5BEF" },
+  P4: { bg: "#FFE4A8", border: "#FFD070", text: "#111318", accent: "#E6B85C" }
 };
 
 const priorityIndicator: Record<EventPriority, string> = {
-  P1: "#E8B89A",
-  P2: "#FCCEB4",
-  P3: "#ABD7FB",
-  P4: "#B8C4CE"
+  P1: "#BDE6D1",
+  P2: "#F7D9DE",
+  P3: "#A8B3F4",
+  P4: "#FFE4A8"
 };
 
 const priorityDot: Record<EventPriority, string> = {
-  P1: "bg-[var(--color-btn-primary)]",
-  P2: "bg-[var(--color-accent-amber)]",
+  P1: "bg-[var(--color-accent-green)]",
+  P2: "bg-[var(--color-accent-rose)]",
   P3: "bg-[var(--color-accent-blue)]",
-  P4: "bg-[var(--color-accent-slate)]"
+  P4: "bg-[var(--color-accent-amber)]"
 };
 
 function buildTitleAttr(event: CalendarEvent): string {
@@ -52,7 +50,7 @@ export function CalendarEventBlock({
   onReschedule,
   onCannotContinue
 }: CalendarEventBlockProps) {
-  const colors = typeColors[event.type] || typeColors.default;
+  const colors = priorityColors[event.priority] || priorityColors.P4;
   const isCompleted = event.status === "completed";
   const isOvertime = event.status === "overtime";
   const isUnscheduled = event.status === "unscheduled";
@@ -71,47 +69,42 @@ export function CalendarEventBlock({
       type="button"
       title={titleAttr}
       onClick={onSelect}
-      className={`group relative h-full w-full cursor-pointer overflow-hidden rounded-lg transition-all duration-200 ${
+      className={`group relative h-full w-full cursor-pointer overflow-hidden transition-all duration-200 ${
         isSelected
-          ? "ring-2 ring-white shadow-[0_4px_16px_rgba(100,90,82,0.15)]"
+          ? "ring-2 ring-white shadow-[0_4px_16px_rgba(17,19,24,0.12)]"
           : isRecentChange
-            ? "shadow-[0_2px_8px_rgba(100,90,82,0.10)]"
+            ? "shadow-[0_2px_8px_rgba(17,19,24,0.08)]"
             : isOvertime
-              ? "border border-[rgba(249,140,83,0.30)] bg-[var(--color-accent-coral-light)]"
-              : "shadow-[0_1px_4px_rgba(100,90,82,0.06)] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(100,90,82,0.12)]"
+              ? "border border-[rgba(235,106,103,0.35)] bg-[var(--color-accent-coral-light)]"
+              : "shadow-[0_1px_3px_rgba(17,19,24,0.06)] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(17,19,24,0.10)]"
       } ${isCompleted ? "opacity-50" : ""}`}
       style={{
         backgroundColor: isOvertime ? undefined : colors.bg,
-        borderColor: isSelected ? "var(--color-btn-primary)" : isOvertime ? "rgba(249,140,83,0.40)" : colors.border
+        borderColor: isSelected ? "var(--color-btn-primary)" : isOvertime ? "rgba(235,106,103,0.45)" : colors.border
       }}
     >
-      <div
-        className="absolute inset-y-0 left-0 w-1"
-        style={{ backgroundColor: isOvertime ? "#F98C53" : colors.accent }}
-      />
-
-      <div className="flex h-full flex-col justify-between overflow-hidden pl-2.5 pr-2 pt-1.5 pb-1">
+      <div className="flex h-full flex-col justify-start overflow-hidden pl-3.5 pr-3 pt-2.5 pb-2 text-left">
         {isShort ? (
           <div className="flex items-center gap-1.5">
             <span
               className="h-1.5 w-1.5 shrink-0 rounded-full"
               style={{ backgroundColor: priorityIndicator[event.priority] }}
             />
-            <span className={`truncate text-[11px] font-medium leading-tight ${isOvertime ? "text-[var(--color-accent-coral-dark)]" : ""}`} style={{ color: isOvertime ? undefined : colors.text }}>
+            <span className={`break-words text-[12px] font-bold leading-tight ${isOvertime ? "text-[var(--color-accent-coral-dark)]" : ""}`} style={{ color: isOvertime ? undefined : colors.text }}>
               {event.title}
             </span>
           </div>
         ) : (
           <>
             <div className="min-w-0 flex-1 space-y-0.5">
-              <span className={`block truncate text-[12px] font-semibold leading-snug ${isUnscheduled ? "italic opacity-70" : ""}`} style={{ color: isOvertime ? undefined : colors.text }}>
+              <span className={`block break-words text-[12px] font-bold leading-snug ${isUnscheduled ? "italic opacity-70" : ""}`} style={{ color: isOvertime ? undefined : colors.text }}>
                 {event.title}
               </span>
 
               {isMedium && !isUnscheduled && (
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: priorityIndicator[event.priority] }} />
-                  <span className="text-[10px] font-medium opacity-70" style={{ color: isOvertime ? undefined : colors.text }}>
+                  <span className="text-[10px] font-bold opacity-70" style={{ color: isOvertime ? undefined : colors.text }}>
                     {startTime} – {endTime}
                   </span>
                 </div>
@@ -121,11 +114,11 @@ export function CalendarEventBlock({
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: priorityIndicator[event.priority] }} />
-                    <span className="text-[10px] font-medium" style={{ color: isOvertime ? undefined : colors.text }}>
+                    <span className="text-[10px] font-bold" style={{ color: isOvertime ? undefined : colors.text }}>
                       {priorityLabel(event.priority)}
                     </span>
                   </div>
-                  <span className="text-[10px] opacity-60" style={{ color: isOvertime ? undefined : colors.text }}>
+                  <span className="text-[10px] opacity-60 font-bold" style={{ color: isOvertime ? undefined : colors.text }}>
                     {startTime} – {endTime}
                   </span>
                 </div>
@@ -134,11 +127,11 @@ export function CalendarEventBlock({
 
             {isLong && !isUnscheduled && (
               <div className="mt-auto flex items-center justify-between border-t pt-1" style={{ borderColor: colors.border }}>
-                <span className="text-[10px] font-medium opacity-60" style={{ color: isOvertime ? undefined : colors.text }}>
+                <span className="text-[10px] font-bold opacity-60" style={{ color: isOvertime ? undefined : colors.text }}>
                   {event.duration}h
                 </span>
                 {isFixed && (
-                  <span className="rounded px-1 py-px text-[9px] font-medium" style={{ backgroundColor: colors.accent + "20", color: colors.accent }}>
+                  <span className="rounded px-1 py-px text-[10px] font-bold" style={{ backgroundColor: colors.accent + "20", color: colors.accent }}>
                     固定
                   </span>
                 )}

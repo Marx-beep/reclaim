@@ -609,11 +609,19 @@ function applyAction(events: CalendarEvent[], tasks: TaskItem[], action: ReplanA
       const preferredHours = action.kind === "add_urgent_task" ? [9, 10, 11, 13.5, 14.5] : [11, 14, 15.5, 16.5];
       const startDay = action.focusDay ?? 1;
       let chosenDay = startDay;
-      let startHour =
-        typeof action.startHour === "number"
-          ? findNextAvailableSlot(events, startDay, duration, { preferredHours: [action.startHour] }) ??
-            findNextAvailableSlot(events, startDay, duration, { preferredHours })
-          : findNextAvailableSlot(events, startDay, duration, { preferredHours });
+      let startHour: number | null;
+      let isFixed = false;
+
+      if (action.pinToSlot && typeof action.startHour === "number") {
+        startHour = snapToQuarterHour(action.startHour);
+        isFixed = true;
+      } else {
+        startHour =
+          typeof action.startHour === "number"
+            ? findNextAvailableSlot(events, startDay, duration, { preferredHours: [action.startHour] }) ??
+              findNextAvailableSlot(events, startDay, duration, { preferredHours })
+            : findNextAvailableSlot(events, startDay, duration, { preferredHours });
+      }
 
       if (startHour === null) {
         const lastDay = Math.max(startDay, deadlineDay);
@@ -640,7 +648,13 @@ function applyAction(events: CalendarEvent[], tasks: TaskItem[], action: ReplanA
         return;
       }
 
-      events.push(createEventFromTask(task, chosenDay, startHour, duration, action.kind === "add_urgent_task"));
+      const newEvent = createEventFromTask(task, chosenDay, startHour, duration, action.kind === "add_urgent_task");
+      if (isFixed) {
+        newEvent.fixed = true;
+        newEvent.movable = false;
+        newEvent.flexible = false;
+      }
+      events.push(newEvent);
       task.status = "scheduled";
       action.day = chosenDay;
       action.startHour = startHour;

@@ -5,10 +5,10 @@ import { TimeAllocationBar } from "./TimeAllocationBar";
 import { useEffect, useRef, useState } from "react";
 import type { CalendarEvent, ReplanChangeType } from "../types/calendar";
 
-const HOUR_HEIGHT = 64;
+const HOUR_HEIGHT = 88;
 const SLOT_COUNT = 24;
 const HOURS = Array.from({ length: SLOT_COUNT }, (_, i) => i);
-const TIME_AXIS_WIDTH = 48;
+const TIME_AXIS_WIDTH = 56;
 
 function formatHour(hour: number) {
   return `${String(hour).padStart(2, "0")}:00`;
@@ -33,6 +33,7 @@ interface CalendarGridProps {
   onFocusedDayChange: (day: number) => void;
   onEventSelect: (eventId: string) => void;
   onEmptySlotSelect: (day: number, startHour: number) => void;
+  onOpenQuickAdd: (day: number, startHour: number) => void;
   onEventMove: (eventId: string, newDay: number, newStartHour: number) => void;
   onEventResize: (eventId: string, newDuration: number) => void;
   onMarkDone: (eventId: string) => void;
@@ -52,6 +53,7 @@ export function CalendarGrid({
   onFocusedDayChange,
   onEventSelect,
   onEmptySlotSelect,
+  onOpenQuickAdd,
   onEventMove,
   onEventResize,
   onMarkDone,
@@ -72,6 +74,18 @@ export function CalendarGrid({
     if (event.status === "completed" || event.status === "unscheduled") continue;
     if (!dayEventMap[event.day]) dayEventMap[event.day] = [];
     dayEventMap[event.day].push(event);
+
+    if (process.env.NODE_ENV === 'development') {
+      if (event.day < 0 || event.day > 6) {
+        console.warn(`[CalendarGrid] 事件 "${event.title}" (${event.id}) 的 day 值 ${event.day} 超出范围 [0-6]`);
+      }
+      if (event.startHour < 0 || event.startHour > 24) {
+        console.warn(`[CalendarGrid] 事件 "${event.title}" (${event.id}) 的 startHour 值 ${event.startHour} 超出范围 [0-24]`);
+      }
+      if (event.duration <= 0) {
+        console.warn(`[CalendarGrid] 事件 "${event.title}" (${event.id}) 的 duration 值 ${event.duration} 无效（应为正数）`);
+      }
+    }
   }
 
   const totalMinutes = events
@@ -104,6 +118,7 @@ export function CalendarGrid({
       setSelectedEventId(null);
       onEventSelect("");
       onEmptySlotSelect(day, hour);
+      onOpenQuickAdd(day, hour);
     }
   };
 
@@ -135,11 +150,11 @@ export function CalendarGrid({
   const totalGridHeight = SLOT_COUNT * HOUR_HEIGHT;
 
   return (
-    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
       <TimeAllocationBar totalMinutes={totalMinutes} categoryMinutes={categoryMinutes} />
 
-      <div className="flex flex-col rounded-xl border border-[var(--color-border-default)] bg-white shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
-        <div className="grid shrink-0 grid-cols-[48px_repeat(7,1fr)] border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)]">
+      <div className="flex flex-col rounded-2xl border border-[var(--color-border-default)] bg-white shadow-[0_4px_16px_rgba(15,23,42,0.08)]">
+        <div className="grid shrink-0 grid-cols-[56px_repeat(7,1fr)] border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-page-subtle)]">
           <div className="border-r border-[var(--color-border-subtle)]" />
           {weekDays.map((day, i) => {
             const isToday = isSameDay(day, today);
@@ -192,7 +207,7 @@ export function CalendarGrid({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "flex-end",
-                      paddingRight: 6,
+                      paddingRight: 8,
                       borderBottom: h === 12 ? "1px solid var(--color-border-subtle)" : "1px solid var(--color-border-subtle)",
                       boxSizing: "border-box"
                     }}
@@ -206,6 +221,18 @@ export function CalendarGrid({
                 <div
                   className="absolute inset-0 grid grid-cols-7"
                   style={{ gridTemplateRows: `repeat(${SLOT_COUNT}, ${HOUR_HEIGHT}px)` }}
+                  onMouseDown={(e) => {
+                    if ((e.target as HTMLElement).closest('[data-event-block]')) return;
+
+                    const gridRect = e.currentTarget.getBoundingClientRect();
+                    const x = e.clientX - gridRect.left;
+                    const y = e.clientY - gridRect.top + e.currentTarget.parentElement!.scrollTop;
+
+                    const dayIndex = Math.min(6, Math.max(0, Math.floor((x / gridRect.width) * 7)));
+                    const hour = Math.min(23, Math.max(0, y / HOUR_HEIGHT));
+
+                    handleGridMouseDown(dayIndex, hour);
+                  }}
                 >
                   {Array.from({ length: 7 }).map((_, dayIndex) =>
                     HOURS.map((hour) => (
@@ -217,7 +244,6 @@ export function CalendarGrid({
                             : "hover:bg-slate-50/50"
                         } ${dayIndex === 6 ? "border-r-0" : ""}`}
                         style={{ borderColor: "#E8ECF0" }}
-                        onMouseDown={() => handleGridMouseDown(dayIndex, hour)}
                       />
                     ))
                   )}
@@ -280,7 +306,7 @@ export function CalendarGrid({
                     const timeHeight = getSlotY(slotEnd - slotStart);
                     const isSelected = selectedEventId === event.id;
 
-                    const MIN_HEIGHT = 24;
+                    const MIN_HEIGHT = 32;
                     const height = Math.max(timeHeight, MIN_HEIGHT);
 
                     const currentGroup = overlapGroups.find((g) => g.includes(idx)) ?? [idx];
@@ -292,18 +318,23 @@ export function CalendarGrid({
                     }
 
                     const dayPct = 100 / 7;
-                    const marginPct = 0.6;
+                    const marginPct = 1.2;
+
+                    const clampedDay = Math.max(0, Math.min(6, day));
+                    const leftPos = clampedDay * dayPct + marginPct / 2;
+                    const widthPct = Math.min(dayPct - marginPct, 100 - leftPos);
 
                     return (
                       <div
                         key={event.id}
-                        className="absolute overflow-hidden rounded-md"
+                        className="absolute overflow-hidden"
                         style={{
-                          left: `${day * dayPct + marginPct / 2}%`,
-                          width: `${dayPct - marginPct}%`,
+                          left: `${Math.max(0, leftPos)}%`,
+                          width: `${Math.max(1, widthPct)}%`,
                           top: `${top}px`,
                           height: `${height}px`,
-                          zIndex: isSelected ? 10 : 5 + stackIndex
+                          zIndex: isSelected ? 10 : 5 + stackIndex,
+                          maxWidth: `${dayPct}%`
                         }}
                         onMouseDown={(e) => {
                           if (event.fixed) return;

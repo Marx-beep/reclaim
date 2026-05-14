@@ -47,23 +47,23 @@ function Frame({
 }
 
 function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-2xl border border-[#e8ebf3] bg-white p-4 shadow-soft ${className}`}>{children}</div>;
+  return <div className={`rounded-2xl border border-[#E4E6EE] bg-white p-4 shadow-soft ${className}`}>{children}</div>;
 }
 
 const priorityOptions: EventPriority[] = ["P1", "P2", "P3", "P4"];
 const dayLabels = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
 const PRIORITY_DOT: Record<EventPriority, string> = {
-  P1: "bg-red-400",
-  P2: "bg-amber-400",
-  P3: "bg-emerald-400",
-  P4: "bg-slate-300"
+  P1: "bg-[#5DBD82]",
+  P2: "bg-[#EB6A67]",
+  P3: "bg-[#A8B3F4]",
+  P4: "bg-[#FFE4A8]"
 };
 
 const STATUS_CONFIG: Record<TaskItem["status"], { label: string; dot: string; badge: string; badgeBg: string }> = {
-  unscheduled: { label: "待安排", dot: "bg-[var(--color-primary)]", badge: "待安排", badgeBg: "bg-[var(--color-primary-lighter)] text-[var(--color-primary-text)]" },
-  scheduled: { label: "已安排", dot: "bg-emerald-500", badge: "已安排", badgeBg: "bg-emerald-50 text-emerald-600" },
-  completed: { label: "已完成", dot: "bg-slate-300", badge: "已完成", badgeBg: "bg-slate-100 text-slate-400" }
+  unscheduled: { label: "待安排", dot: "bg-[#A8B3F4]", badge: "待安排", badgeBg: "bg-[#EEF0FF] text-[#4F5BEF]" },
+  scheduled: { label: "已安排", dot: "bg-[#5DBD82]", badge: "已安排", badgeBg: "bg-[#CBEEDD] text-[#123524]" },
+  completed: { label: "已完成", dot: "bg-[#8A8D99]", badge: "已完成", badgeBg: "bg-[#F0F1F5] text-[#8A8D99]" }
 };
 
 function TaskCard({
@@ -88,7 +88,7 @@ function TaskCard({
   const isOverdue = task.status === "unscheduled" && new Date().getDay() > task.dueDay;
 
   return (
-    <div className={`group rounded-xl border bg-white px-4 py-3 transition hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] ${isDone ? "opacity-60" : "border-[#e8ebf3]"}`}>
+    <div className={`group rounded-xl border bg-white px-4 py-3 transition hover:shadow-[0_2px_8px_rgba(17,19,24,0.06)] ${isDone ? "opacity-60" : "border-[#E4E6EE]"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -297,10 +297,10 @@ export function TasksView({
   const highPriorityCount = p1Count + p2Count;
 
   const statItems = [
-    { label: "待安排", value: unscheduledCount, unit: "个", color: "#8B9DC3", bg: "#F0F4F8" },
-    { label: "已安排", value: scheduledCount, unit: "个", color: "#7B9B7B", bg: "#F0F4ED" },
-    { label: "已完成", value: completedCount, unit: "个", color: "#8A9A7B", bg: "#F0F4ED" },
-    { label: "高优先级", value: highPriorityCount, unit: "个", color: "#B88A8A", bg: "#FFF5F5" }
+    { label: "待安排", value: unscheduledCount, unit: "个", color: "#A8B3F4", bg: "#EEF0FF" },
+    { label: "已安排", value: scheduledCount, unit: "个", color: "#5DBD82", bg: "#CBEEDD" },
+    { label: "已完成", value: completedCount, unit: "个", color: "#6CC48D", bg: "#EDFAF3" },
+    { label: "高优先级", value: highPriorityCount, unit: "个", color: "#EB6A67", bg: "#FDF2F2" }
   ];
 
   const getSuggestion = () => {
@@ -428,9 +428,9 @@ export function TasksView({
           </Card>
 
           <Card>
-            <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-700">
-              <div className="flex h-5 w-5 items-center justify-center rounded bg-[#FAF7F0]">
-                <div className="h-2 w-2 rounded-sm bg-[#C4A882]" />
+            <div className="flex items-center gap-2 text-[13px] font-semibold text-[#111318]">
+              <div className="flex h-5 w-5 items-center justify-center rounded bg-[#FFF8E6]">
+                <div className="h-2 w-2 rounded-sm bg-[#E6B85C]" />
               </div>
               <span>今日任务重点</span>
             </div>
@@ -458,13 +458,13 @@ export function TasksView({
 
                 {suggestion && (
                   <div className={`flex items-start gap-2 rounded-lg px-3 py-2 text-[11px] leading-relaxed ${
-                    suggestion.type === "warning" ? "bg-[#FAF7F0] text-[#8B7B60] border border-[#E8DCC8]" :
-                    suggestion.type === "success" ? "bg-[#F0F4ED] text-[#6B7B6A] border border-[#C4D0B8]" :
-                    "bg-[#F0F4F8] text-[#6B7B8B] border border-[#C8D0DC]"
+                    suggestion.type === "warning" ? "bg-[#FFF8E6] text-[#8A6D30] border border-[#FFE4A8]" :
+                    suggestion.type === "success" ? "bg-[#EDFAF3] text-[#2D6B4A] border border-[#9DD8B8]" :
+                    "bg-[#EEF0FF] text-[#4F5BEF] border border-[#C4CCF5]"
                   }`}>
                     <span className={`mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full ${
-                      suggestion.type === "warning" ? "bg-[#C4A882]" :
-                      suggestion.type === "success" ? "bg-[#8A9A7B]" :
+                      suggestion.type === "warning" ? "bg-[#E6B85C]" :
+                      suggestion.type === "success" ? "bg-[#6CC48D]" :
                       "bg-[#8B9DC3]"
                     }`} />
                     {suggestion.text}
@@ -478,9 +478,9 @@ export function TasksView({
                         <span>安排进度</span>
                         <span className="font-medium">{scheduledCount} / {totalCount}（{scheduledRatio}%）</span>
                       </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-[#F0F1F5]">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-[#A8B899] to-[#8A9A7B] transition-all duration-500"
+                          className="h-full rounded-full bg-gradient-to-r from-[#6CC48D] to-[#5DBD82] transition-all duration-500"
                           style={{ width: `${scheduledRatio}%` }}
                         />
                       </div>
@@ -564,10 +564,10 @@ export function HabitsView({
   const completionRatio = totalTarget > 0 ? Math.round((completedCount / totalTarget) * 100) : 0;
 
   const statItems = [
-    { label: "本周完成", value: completedCount, unit: "次", sub: `/ ${totalTarget} 次目标`, color: "#A09AB8", bg: "#F4F2FA" },
-    { label: "进行中", value: activeHabits, unit: "个", sub: "活跃习惯", color: "#7B9B7B", bg: "#F0F4ED" },
-    { label: "待完成", value: remainingCount, unit: "次", sub: "待完成", color: "#C4A882", bg: "#FAF7F0" },
-    { label: "周投入", value: totalDuration.toFixed(1), unit: "小时", sub: "/ 周", color: "#8B9DC3", bg: "#F0F4F8" }
+    { label: "本周完成", value: completedCount, unit: "次", sub: `/ ${totalTarget} 次目标`, color: "#A8B3F4", bg: "#EEF0FF" },
+    { label: "进行中", value: activeHabits, unit: "个", sub: "活跃习惯", color: "#6CC48D", bg: "#EDFAF3" },
+    { label: "待完成", value: remainingCount, unit: "次", sub: "待完成", color: "#E6B85C", bg: "#FFF8E6" },
+    { label: "周投入", value: totalDuration.toFixed(1), unit: "小时", sub: "/ 周", color: "#A8B3F4", bg: "#EEF0FF" }
   ];
 
   const getSuggestion = () => {
@@ -638,9 +638,9 @@ export function HabitsView({
 
           <Card>
             <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-950">
-                <div className="flex h-5 w-5 items-center justify-center rounded bg-[#F4F2FA]">
-                  <div className="h-2.5 w-2.5 rounded-sm bg-[#A09AB8]" />
+              <div className="flex items-center gap-2 text-[13px] font-semibold text-[#111318]">
+                <div className="flex h-5 w-5 items-center justify-center rounded bg-[#FFF8E6]">
+                  <div className="h-2.5 w-2.5 rounded-sm bg-[#FFE4A8]" />
                 </div>
                 <span>习惯概览</span>
               </div>
@@ -688,9 +688,9 @@ export function HabitsView({
                       <span>本周完成进度</span>
                       <span className="font-medium">{completedCount} / {totalTarget} ({completionRatio}%)</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-2 overflow-hidden rounded-full bg-[#F0F1F5]">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-[#B8ACC8] to-[#A09AB8] transition-all duration-500"
+                        className="h-full rounded-full bg-gradient-to-r from-[#A8B3F4] to-[#6D7BEF] transition-all duration-500"
                         style={{ width: `${completionRatio}%` }}
                       />
                     </div>
@@ -753,30 +753,30 @@ export function FocusView({
         <div className="grid shrink-0 gap-4 xl:grid-cols-[340px_minmax(0,1fr)]">
           <Card>
             <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-950">
-                <div className="flex h-5 w-5 items-center justify-center rounded bg-[#F0F4ED]">
-                  <Target className="h-3 w-3 text-[#8A9A7B]" />
+              <div className="flex items-center gap-2 text-[13px] font-semibold text-[#111318]">
+                <div className="flex h-5 w-5 items-center justify-center rounded bg-[#EDFAF3]">
+                  <Target className="h-3 w-3 text-[#6CC48D]" />
                 </div>
                 <span>本周专注目标</span>
               </div>
-              <div className={`rounded-full px-2.5 py-1 text-center ${isBehind ? "bg-[#FAF7F0]" : "bg-[#F0F4ED]"}`}>
-                <span className={`text-[13px] font-bold tabular-nums ${isBehind ? "text-[#C4A882]" : "text-[#8A9A7B]"}`}>{pct}%</span>
+              <div className={`rounded-full px-2.5 py-1 text-center ${isBehind ? "bg-[#FFF8E6]" : "bg-[#EDFAF3]"}`}>
+                <span className={`text-[13px] font-bold tabular-nums ${isBehind ? "text-[#E6B85C]" : "text-[#6CC48D]"}`}>{pct}%</span>
               </div>
             </div>
 
             <div className="mb-4 text-center">
               <div className="flex items-baseline justify-center gap-1">
                 <span className="text-[36px] font-bold tabular-nums text-[var(--color-event-focus)]">{focusHours.toFixed(1)}</span>
-                <span className="text-sm text-slate-400">/ {target} 小时</span>
+                <span className="text-sm text-[#8A8D99]">/ {target} 小时</span>
               </div>
-              <div className="mt-1 text-[11px] text-slate-500">
+              <div className="mt-1 text-[11px] text-[#8A8D99]">
                 {isBehind ? `距离目标还差 ${gap.toFixed(1)} 小时` : "目标已达成"}
               </div>
             </div>
 
-            <div className="mb-4 h-2.5 overflow-hidden rounded-full bg-slate-100">
+            <div className="mb-4 h-2.5 overflow-hidden rounded-full bg-[#F0F1F5]">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${isBehind ? "bg-gradient-to-r from-[#D4C4A8] to-[#C4A882]" : "bg-gradient-to-r from-[#A8B899] to-[#8A9A7B]"}`}
+                className={`h-full rounded-full transition-all duration-500 ${isBehind ? "bg-gradient-to-r from-[#FFE4A8] to-[#E6B85C]" : "bg-gradient-to-r from-[#6CC48D] to-[#5DBD82]"}`}
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -812,50 +812,50 @@ export function FocusView({
             <Card>
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-950">
-                  <div className="flex h-5 w-5 items-center justify-center rounded bg-[#F0F4ED]">
-                    <div className="h-2.5 w-2.5 rounded-sm bg-[#8A9A7B]" />
+                  <div className="flex h-5 w-5 items-center justify-center rounded bg-[#EDFAF3]">
+                    <div className="h-2.5 w-2.5 rounded-sm bg-[#6CC48D]" />
                   </div>
                   <span>专注概览</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-4 gap-3">
-                <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#F0F4ED" }}>
-                  <div className="text-[10px] text-slate-500">本周专注</div>
-                  <div className="mt-1 text-[22px] font-bold text-[#8A9A7B]">{focusHours.toFixed(1)}</div>
-                  <div className="text-[9px] text-slate-400">小时</div>
+                <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#EDFAF3" }}>
+                  <div className="text-[10px] text-[#8A8D99]">本周专注</div>
+                  <div className="mt-1 text-[22px] font-bold text-[#5DBD82]">{focusHours.toFixed(1)}</div>
+                  <div className="text-[9px] text-[#8A8D99]">小时</div>
                 </div>
-                <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#FAF7F0" }}>
-                  <div className="text-[10px] text-slate-500">已保护</div>
-                  <div className="mt-1 text-[22px] font-bold text-[#C4A882]">{focusPlan.protectedHours.toFixed(1)}</div>
-                  <div className="text-[9px] text-slate-400">小时</div>
+                <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#FFF8E6" }}>
+                  <div className="text-[10px] text-[#8A8D99]">已保护</div>
+                  <div className="mt-1 text-[22px] font-bold text-[#E6B85C]">{focusPlan.protectedHours.toFixed(1)}</div>
+                  <div className="text-[9px] text-[#8A8D99]">小时</div>
                 </div>
-                <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#F0F4ED" }}>
-                  <div className="text-[10px] text-slate-500">日均专注</div>
-                  <div className="mt-1 text-[22px] font-bold text-[#8A9A7B]">{dailyAvg}</div>
-                  <div className="text-[9px] text-slate-400">小时/天</div>
+                <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#EDFAF3" }}>
+                  <div className="text-[10px] text-[#8A8D99]">日均专注</div>
+                  <div className="mt-1 text-[22px] font-bold text-[#6CC48D]">{dailyAvg}</div>
+                  <div className="text-[9px] text-[#8A8D99]">小时/天</div>
                 </div>
-                <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#F0F4F8" }}>
-                  <div className="text-[10px] text-slate-500">目标差距</div>
-                  <div className={`mt-1 text-[22px] font-bold ${isBehind ? "text-[#C4A882]" : "text-[#8A9A7B]"}`}>{isBehind ? gap.toFixed(1) : "0"}</div>
-                  <div className="text-[9px] text-slate-400">小时</div>
+                <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#EEF0FF" }}>
+                  <div className="text-[10px] text-[#8A8D99]">目标差距</div>
+                  <div className={`mt-1 text-[22px] font-bold ${isBehind ? "text-[#EB6A67]" : "text-[#6CC48D]"}`}>{isBehind ? gap.toFixed(1) : "0"}</div>
+                  <div className="text-[9px] text-[#8A8D99]">小时</div>
                 </div>
               </div>
             </Card>
 
             <Card>
-              <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-950">
-                <Target className="h-4 w-4 text-[var(--color-event-focus)]" />
+              <div className="flex items-center gap-2 text-[13px] font-semibold text-[#111318]">
+                <Target className="h-4 w-4 text-[var(--color-accent-green)]" />
                 <span>当前洞察</span>
               </div>
               <div className="mt-3 space-y-3">
-                <div className="flex items-start gap-2 rounded-xl border px-3 py-2.5" style={{ borderColor: compressedByMeetings ? "#E8C8C8" : "#C4D0B8", backgroundColor: compressedByMeetings ? "#FFF5F5" : "#F0F4ED" }}>
-                  <span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${compressedByMeetings ? "bg-[#B88A9A]" : "bg-[#8A9A7B]"}`} />
+                <div className="flex items-start gap-2 rounded-xl border px-3 py-2.5" style={{ borderColor: compressedByMeetings ? "#F7D9DE" : "#9DD8B8", backgroundColor: compressedByMeetings ? "#FDF2F2" : "#EDFAF3" }}>
+                  <span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${compressedByMeetings ? "bg-[#EB6A67]" : "bg-[#6CC48D]"}`} />
                   <div>
-                    <div className="text-[12px] font-medium" style={{ color: compressedByMeetings ? "#8B6B6B" : "#6B7B6A" }}>
+                    <div className="text-[12px] font-medium" style={{ color: compressedByMeetings ? "#7A2522" : "#123524" }}>
                       {compressedByMeetings ? "会议正在压缩专注时长" : "专注时间有充足的保护空间"}
                     </div>
-                    <div className="mt-1 text-[11px]" style={{ color: compressedByMeetings ? "#9B7B7B" : "#7B8B7A" }}>
+                    <div className="mt-1 text-[11px]" style={{ color: compressedByMeetings ? "#B85552" : "#3D8B5E" }}>
                       {compressedByMeetings
                         ? "检测到会议占用了较多完整空档，建议减少低优先级会议或手动锁定上午的连续时段。"
                         : "当前日程中仍有足够的完整空档可供保护为专注时间。"}
@@ -863,9 +863,9 @@ export function FocusView({
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-dashed border-slate-200 p-3" style={{ backgroundColor: "#FAFAFA" }}>
-                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600">
-                    <Clock className="h-3.5 w-3.5 text-slate-400" />
+                <div className="rounded-xl border border-dashed border-[#E4E6EE] p-3" style={{ backgroundColor: "#FAFBFC" }}>
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#4B5563]">
+                    <Clock className="h-3.5 w-3.5 text-[#8A8D99]" />
                     推荐保护时段
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
@@ -874,7 +874,7 @@ export function FocusView({
                       { label: "14:00–16:00", desc: "2h · 午后清醒期" },
                       { label: "19:00–21:00", desc: "2h · 晚间无干扰" }
                     ].map((slot) => (
-                      <span key={slot.label} className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-event-focus)]/20 bg-[var(--color-event-focus-light)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-event-focus-text)]">
+                      <span key={slot.label} className="inline-flex items-center gap-1 rounded-lg border border-[#9DD8B8]/30 bg-[#EDFAF3] px-2.5 py-1 text-[11px] font-medium text-[#123524]">
                         {slot.label}
                         <span className="text-[9px] opacity-60">{slot.desc}</span>
                       </span>
@@ -986,7 +986,7 @@ function MeetingCard({ meeting, onReschedule, onSkip }: {
         </span>
       </div>
       <div className="mt-4 flex gap-2 opacity-100 transition-opacity group-hover:opacity-100">
-        <button type="button" className="rounded-lg bg-[var(--color-btn-primary-light)] border border-[rgba(138,136,184,0.22)] px-3 py-1.5 text-[11px] font-medium text-[var(--color-btn-primary-text)] transition-colors hover:bg-[var(--color-btn-primary)] hover:text-white" onClick={onReschedule}>
+        <button type="button" className="rounded-lg bg-[#D4DAFA] border border-[#A8B3F4] px-3 py-1.5 text-[11px] font-medium text-[#2D3582] transition-colors hover:bg-[#A8B3F4] hover:text-white" onClick={onReschedule}>
           重新安排时间
         </button>
         <button type="button" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-50" onClick={onSkip}>
@@ -1094,9 +1094,9 @@ export function MeetingsView({
           <div className="space-y-4">
             <Card>
               <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-950">
-                  <div className="flex h-5 w-5 items-center justify-center rounded bg-[#F0F4ED]">
-                    <div className="h-2.5 w-2.5 rounded-sm bg-[#8A9A7B]" />
+                <div className="flex items-center gap-2 text-[13px] font-semibold text-[#111318]">
+                  <div className="flex h-5 w-5 items-center justify-center rounded bg-[#EEF0FF]">
+                    <div className="h-2.5 w-2.5 rounded-sm bg-[#A8B3F4]" />
                   </div>
                   <span>会议概览</span>
                 </div>
@@ -1110,33 +1110,33 @@ export function MeetingsView({
               ) : (
                 <>
                   <div className="grid grid-cols-4 gap-3">
-                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#F0F4ED" }}>
-                      <div className="text-[10px] text-slate-500">会议总数</div>
-                      <div className="mt-1 text-[22px] font-bold text-[#8A9A7B]">{meetings.length}</div>
-                      <div className="text-[9px] text-slate-400">个</div>
+                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#EEF0FF" }}>
+                      <div className="text-[10px] text-[#8A8D99]">会议总数</div>
+                      <div className="mt-1 text-[22px] font-bold text-[#6D7BEF]">{meetings.length}</div>
+                      <div className="text-[9px] text-[#8A8D99]">个</div>
                     </div>
-                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#F0F4ED" }}>
-                      <div className="text-[10px] text-slate-500">时间合适</div>
-                      <div className="mt-1 text-[22px] font-bold text-[#7B9B7B]">{normalCount}</div>
-                      <div className="text-[9px] text-slate-400">个正常</div>
+                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#EDFAF3" }}>
+                      <div className="text-[10px] text-[#8A8D99]">时间合适</div>
+                      <div className="mt-1 text-[22px] font-bold text-[#6CC48D]">{normalCount}</div>
+                      <div className="text-[9px] text-[#8A8D99]">个正常</div>
                     </div>
-                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#FAF7F0" }}>
-                      <div className="text-[10px] text-slate-500">需要关注</div>
-                      <div className={`mt-1 text-[22px] font-bold ${conflictCount > 0 ? "text-[#C4A882]" : "text-slate-400"}`}>{conflictCount}</div>
-                      <div className="text-[9px] text-slate-400">个冲突</div>
+                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#FFF8E6" }}>
+                      <div className="text-[10px] text-[#8A8D99]">需要关注</div>
+                      <div className={`mt-1 text-[22px] font-bold ${conflictCount > 0 ? "text-[#EB6A67]" : "text-[#8A8D99]"}`}>{conflictCount}</div>
+                      <div className="text-[9px] text-[#8A8D99]">个冲突</div>
                     </div>
-                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#F4F2FA" }}>
-                      <div className="text-[10px] text-slate-500">总时长</div>
-                      <div className="mt-1 text-[22px] font-bold text-[#A09AB8]">{totalDuration.toFixed(1)}</div>
-                      <div className="text-[9px] text-slate-400">小时/周</div>
+                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#EEF0FF" }}>
+                      <div className="text-[10px] text-[#8A8D99]">总时长</div>
+                      <div className="mt-1 text-[22px] font-bold text-[#A8B3F4]">{totalDuration.toFixed(1)}</div>
+                      <div className="text-[9px] text-[#8A8D99]">小时/周</div>
                     </div>
                   </div>
 
                   <div className={`mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-[11px] ${
-                    healthStatus.type === "success" ? "bg-[#F0F4ED] text-[#6B7B6A] border border-[#C4D0B8]" :
-                    healthStatus.type === "warning" ? "bg-[#FAF7F0] text-[#8B7B60] border border-[#E8DCC8]" :
-                    healthStatus.type === "info" ? "bg-[#F0F4F8] text-[#6B7B8B] border border-[#C8D0DC]" :
-                    "bg-slate-50 text-slate-500 border border-slate-200"
+                    healthStatus.type === "success" ? "bg-[#EDFAF3] text-[#123524] border border-[#9DD8B8]" :
+                    healthStatus.type === "warning" ? "bg-[#FFF8E6] text-[#8A6D30] border border-[#FFE4A8]" :
+                    healthStatus.type === "info" ? "bg-[#EEF0FF] text-[#4F5BEF] border border-[#C4CCF5]" :
+                    "bg-[#F0F1F5] text-[#8A8D99] border border-[#E4E6EE]"
                   }`}>
                     <span className={`mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full ${
                       healthStatus.type === "success" ? "bg-[#8A9A7B]" :
@@ -1274,7 +1274,7 @@ function LinkCard({ link, onPreview, onCopy }: {
             <Copy className={`h-3.5 w-3.5 transition-colors ${copied ? "text-[#8A9A7B]" : ""}`} />
             {copied ? "已复制" : "复制链接"}
           </button>
-          <button type="button" className="flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-btn-primary-light)] border border-[rgba(138,136,184,0.22)] px-3 py-2 text-[11px] font-medium text-[var(--color-btn-primary-text)] transition-colors hover:bg-[var(--color-btn-primary)] hover:text-white" onClick={onPreview}>
+          <button type="button" className="flex items-center justify-center gap-1.5 rounded-lg bg-[#D4DAFA] border border-[#A8B3F4] px-3 py-2 text-[11px] font-medium text-[#2D3582] transition-colors hover:bg-[#A8B3F4] hover:text-white" onClick={onPreview}>
             <Eye className="h-3.5 w-3.5" />
             预览时间
           </button>
@@ -1382,9 +1382,9 @@ export function LinksView({
           <div className="space-y-4">
             <Card>
               <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-950">
-                  <div className="flex h-5 w-5 items-center justify-center rounded bg-[#F0F4ED]">
-                    <div className="h-2.5 w-2.5 rounded-sm bg-[#8A9A7B]" />
+                <div className="flex items-center gap-2 text-[13px] font-semibold text-[#111318]">
+                  <div className="flex h-5 w-5 items-center justify-center rounded bg-[#EEF0FF]">
+                    <div className="h-2.5 w-2.5 rounded-sm bg-[#A8B3F4]" />
                   </div>
                   <span>预约概览</span>
                 </div>
@@ -1398,30 +1398,30 @@ export function LinksView({
               ) : (
                 <>
                   <div className="grid grid-cols-4 gap-3">
-                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#F0F4ED" }}>
-                      <div className="text-[10px] text-slate-500">链接总数</div>
-                      <div className="mt-1 text-[22px] font-bold text-[#8A9A7B]">{totalLinks}</div>
-                      <div className="text-[9px] text-slate-400">个</div>
+                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#EEF0FF" }}>
+                      <div className="text-[10px] text-[#8A8D99]">链接总数</div>
+                      <div className="mt-1 text-[22px] font-bold text-[#6D7BEF]">{totalLinks}</div>
+                      <div className="text-[9px] text-[#8A8D99]">个</div>
                     </div>
-                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#F0F4ED" }}>
-                      <div className="text-[10px] text-slate-500">已启用</div>
-                      <div className="mt-1 text-[22px] font-bold text-[#7B9B7B]">{enabledLinks}</div>
-                      <div className="text-[9px] text-slate-400">个</div>
+                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#EDFAF3" }}>
+                      <div className="text-[10px] text-[#8A8D99]">已启用</div>
+                      <div className="mt-1 text-[22px] font-bold text-[#6CC48D]">{enabledLinks}</div>
+                      <div className="text-[9px] text-[#8A8D99]">个</div>
                     </div>
-                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#FAF7F0" }}>
-                      <div className="text-[10px] text-slate-500">可用时段</div>
-                      <div className="mt-1 text-[22px] font-bold text-[#C4A882]">{totalHours.toFixed(1)}</div>
-                      <div className="text-[9px] text-slate-400">小时/天</div>
+                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#FFF8E6" }}>
+                      <div className="text-[10px] text-[#8A8D99]">可用时段</div>
+                      <div className="mt-1 text-[22px] font-bold text-[#E6B85C]">{totalHours.toFixed(1)}</div>
+                      <div className="text-[9px] text-[#8A8D99]">小时/天</div>
                     </div>
-                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#F4F2FA" }}>
-                      <div className="text-[10px] text-slate-500">已停用</div>
-                      <div className="mt-1 text-[22px] font-bold text-[#A09AB8]">{totalLinks - enabledLinks}</div>
-                      <div className="text-[9px] text-slate-400">个</div>
+                    <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#EEF0FF" }}>
+                      <div className="text-[10px] text-[#8A8D99]">已停用</div>
+                      <div className="mt-1 text-[22px] font-bold text-[#A8B3F4]">{totalLinks - enabledLinks}</div>
+                      <div className="text-[9px] text-[#8A8D99]">个</div>
                     </div>
                   </div>
 
-                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#C4D0B8] bg-[#F0F4ED] px-3 py-2 text-[11px] text-[#6B7B6A]">
-                    <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#8A9A7B]" />
+                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#C4CCF5] bg-[#EEF0FF] px-3 py-2 text-[11px] text-[#4F5BEF]">
+                    <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#A8B3F4]" />
                     {enabledLinks > 0 ? `有 ${enabledLinks} 个预约链接正在接受他人预约` : "暂无启用的预约链接"}
                   </div>
                 </>
@@ -1433,10 +1433,10 @@ export function LinksView({
             ))}
 
             {links.length === 0 && (
-              <Card className="border-dashed border-slate-200">
+              <Card className="border-dashed border-[#E4E6EE]">
                 <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F0F4ED]">
-                    <Link2 className="h-5 w-5 text-[#8A9A7B]" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EEF0FF]">
+                    <Link2 className="h-5 w-5 text-[#A8B3F4]" />
                   </div>
                   <div className="mt-3 text-[13px] font-medium text-slate-600">暂无预约链接</div>
                   <div className="mt-1 text-[11px] text-slate-400">在左侧填写信息，创建第一个预约链接</div>
@@ -1535,9 +1535,9 @@ export function SyncView({
       <div className="flex h-full min-h-0 flex-col gap-4">
         <Card>
           <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-950">
-              <div className="flex h-5 w-5 items-center justify-center rounded bg-[#F0F4ED]">
-                <div className="h-2.5 w-2.5 rounded-sm bg-[#8A9A7B]" />
+            <div className="flex items-center gap-2 text-[13px] font-semibold text-[#111318]">
+              <div className="flex h-5 w-5 items-center justify-center rounded bg-[#EDFAF3]">
+                <div className="h-2.5 w-2.5 rounded-sm bg-[#6CC48D]" />
               </div>
               <span>同步概览</span>
             </div>
@@ -1545,30 +1545,30 @@ export function SyncView({
 
           {connections.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-4 text-center">
-              <div className="text-[13px] text-slate-400">暂无日历连接</div>
-              <div className="mt-1 text-[11px] text-slate-400">点击下方卡片连接你的日历</div>
+              <div className="text-[13px] text-[#8A8D99]">暂无日历连接</div>
+              <div className="mt-1 text-[11px] text-[#8A8D99]">点击下方卡片连接你的日历</div>
             </div>
           ) : (
             <div className="grid grid-cols-4 gap-3">
-              <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#F0F4ED" }}>
-                <div className="text-[10px] text-slate-500">已连接</div>
-                <div className="mt-1 text-[22px] font-bold text-[#8A9A7B]">{syncedCount}</div>
-                <div className="text-[9px] text-slate-400">个日历</div>
+              <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#EDFAF3" }}>
+                <div className="text-[10px] text-[#8A8D99]">已连接</div>
+                <div className="mt-1 text-[22px] font-bold text-[#6CC48D]">{syncedCount}</div>
+                <div className="text-[9px] text-[#8A8D99]">个日历</div>
               </div>
-              <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#FAF7F0" }}>
-                <div className="text-[10px] text-slate-500">待授权</div>
-                <div className={`mt-1 text-[22px] font-bold ${pendingCount > 0 ? "text-[#C4A882]" : "text-slate-400"}`}>{pendingCount}</div>
-                <div className="text-[9px] text-slate-400">个待连接</div>
+              <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#FFF8E6" }}>
+                <div className="text-[10px] text-[#8A8D99]">待授权</div>
+                <div className={`mt-1 text-[22px] font-bold ${pendingCount > 0 ? "text-[#E6B85C]" : "text-[#8A8D99]"}`}>{pendingCount}</div>
+                <div className="text-[9px] text-[#8A8D99]">个待连接</div>
               </div>
-              <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#FFF5F5" }}>
-                <div className="text-[10px] text-slate-500">同步失败</div>
-                <div className={`mt-1 text-[22px] font-bold ${failedCount > 0 ? "text-rose-500" : "text-slate-400"}`}>{failedCount}</div>
-                <div className="text-[9px] text-slate-400">个</div>
+              <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#FDF2F2" }}>
+                <div className="text-[10px] text-[#8A8D99]">同步失败</div>
+                <div className={`mt-1 text-[22px] font-bold ${failedCount > 0 ? "text-[#EB6A67]" : "text-[#8A8D99]"}`}>{failedCount}</div>
+                <div className="text-[9px] text-[#8A8D99]">个</div>
               </div>
-              <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#F4F2FA" }}>
-                <div className="text-[10px] text-slate-500">隐私模式</div>
-                <div className="mt-1 text-[11px] font-medium text-[#A09AB8]">可配置</div>
-                <div className="text-[9px] text-slate-400">保护细节</div>
+              <div className="rounded-xl p-3 text-center" style={{ backgroundColor: "#EEF0FF" }}>
+                <div className="text-[10px] text-[#8A8D99]">隐私模式</div>
+                <div className="mt-1 text-[11px] font-medium text-[#A8B3F4]">可配置</div>
+                <div className="text-[9px] text-[#8A8D99]">保护细节</div>
               </div>
             </div>
           )}
@@ -1576,12 +1576,12 @@ export function SyncView({
 
         <div className="grid shrink-0 gap-4 md:grid-cols-2">
           {connections.length === 0 && (
-            <Card className="col-span-2 border-dashed border-slate-200">
+            <Card className="col-span-2 border-dashed border-[#E4E6EE]">
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0F4ED]">
-                  <CalendarIcon className="h-6 w-6 text-[#8A9A7B]" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#EEF0FF]">
+                  <CalendarIcon className="h-6 w-6 text-[#A8B3F4]" />
                 </div>
-                <div className="mt-3 text-[14px] font-medium text-slate-600">暂无日历连接</div>
+                <div className="mt-3 text-[14px] font-medium text-[#4B5563]">暂无日历连接</div>
                 <div className="mt-1 text-[12px] text-slate-400">连接日历后，系统可以读取你的忙碌时间并自动规避冲突</div>
               </div>
             </Card>
@@ -1634,7 +1634,7 @@ export function SyncView({
                   </button>
                   <button
                     type="button"
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--color-btn-primary-light)] border border-[rgba(138,136,184,0.22)] px-3 py-2 text-[11px] font-medium text-[var(--color-btn-primary-text)] transition-colors hover:bg-[var(--color-btn-primary)] hover:text-white"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#D4DAFA] border border-[#A8B3F4] px-3 py-2 text-[11px] font-medium text-[#2D3582] transition-colors hover:bg-[#A8B3F4] hover:text-white"
                     onClick={() => onSyncConnection(connection.id)}
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
@@ -1704,62 +1704,62 @@ export function AnalyticsView({
   const avgDailyHours = totalHours / 7;
 
   const cards = [
-    { key: "task-completion", label: "任务完成率", value: `${taskCompletionRate}%`, sub: `${taskCompletedCount}/${taskCount} 个`, color: taskCompletionRate >= 70 ? "#8A9A7B" : taskCompletionRate >= 40 ? "#C4A882" : "#B88A9A" },
-    { key: "focus-time", label: "专注时间", value: `${focusHours.toFixed(1)}`, sub: "小时", color: "#8A9A7B" },
-    { key: "meeting-time", label: "会议时间", value: `${meetingHours.toFixed(1)}`, sub: "小时", color: "#C4A882" },
-    { key: "habit-completion", label: "习惯达成率", value: `${habitCompletionRate}%`, sub: habitTotalTarget > 0 ? `${habitTotalDone}/${habitTotalTarget}` : "未设置", color: "#A09AB8" },
-    { key: "daily-avg", label: "日均安排", value: `${avgDailyHours.toFixed(1)}`, sub: "小时/天", color: "#9095B3" },
-    { key: "completed", label: "已完成", value: `${completedCount}`, sub: "项", color: "#8A9A7B" }
+    { key: "task-completion", label: "任务完成率", value: `${taskCompletionRate}%`, sub: `${taskCompletedCount}/${taskCount} 个`, color: taskCompletionRate >= 70 ? "#5DBD82" : taskCompletionRate >= 40 ? "#E6B85C" : "#EB6A67" },
+    { key: "focus-time", label: "专注时间", value: `${focusHours.toFixed(1)}`, sub: "小时", color: "#6CC48D" },
+    { key: "meeting-time", label: "会议时间", value: `${meetingHours.toFixed(1)}`, sub: "小时", color: "#A8B3F4" },
+    { key: "habit-completion", label: "习惯达成率", value: `${habitCompletionRate}%`, sub: habitTotalTarget > 0 ? `${habitTotalDone}/${habitTotalTarget}` : "未设置", color: "#E6B85C" },
+    { key: "daily-avg", label: "日均安排", value: `${avgDailyHours.toFixed(1)}`, sub: "小时/天", color: "#6D7BEF" },
+    { key: "completed", label: "已完成", value: `${completedCount}`, sub: "项", color: "#5DBD82" }
   ];
 
   const TIME_BARS = [
-    { label: "专注", hours: focusHours, color: "#8A9A7B" },
-    { label: "会议", hours: meetingHours, color: "#C4A882" },
-    { label: "习惯", hours: habitHours, color: "#A09AB8" },
-    { label: "任务", hours: taskHours, color: "#9095B3" }
+    { label: "专注", hours: focusHours, color: "#6CC48D" },
+    { label: "会议", hours: meetingHours, color: "#A8B3F4" },
+    { label: "习惯", hours: habitHours, color: "#E6B85C" },
+    { label: "任务", hours: taskHours, color: "#6D7BEF" }
   ];
 
   const insights: { condition: boolean; icon: ReactNode; color: string; bg: string; border: string; text: string }[] = [
     {
       condition: meetingHours > focusHours,
-      icon: <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#C4A882" }} />,
-      color: "#C4A882", bg: "#FAF7F0", border: "#D4C4A8",
+      icon: <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#E6B85C" }} />,
+      color: "#8A6D30", bg: "#FFF8E6", border: "#FFE4A8",
       text: "会议时间超过专注时间，深度工作时段可能被挤压。"
     },
     {
       condition: habitCompletionRate < 50 && habitTotalTarget > 0,
-      icon: <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#A09AB8" }} />,
-      color: "#A09AB8", bg: "#F4F2FA", border: "#CCC8D8",
+      icon: <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#A8B3F4" }} />,
+      color: "#4F5BEF", bg: "#EEF0FF", border: "#C4CCF5",
       text: "习惯完成率偏低，可适当减少每周目标数量或调整时段。"
     },
     {
       condition: replanCount > 5,
-      icon: <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#9095B3" }} />,
-      color: "#9095B3", bg: "#F0F2F7", border: "#C8CCD8",
+      icon: <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#EB6A67" }} />,
+      color: "#7A2522", bg: "#FDF2F2", border: "#F7D9DE",
       text: "本周重排次数较多，日程变动较频繁，建议减少临时插入。"
     },
     {
       condition: giveUpCount > 3,
-      icon: <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#B88A9A" }} />,
-      color: "#B88A9A", bg: "#FFF5F5", border: "#E8C8C8",
+      icon: <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#EB6A67" }} />,
+      color: "#7A2522", bg: "#FDF2F2", border: "#F7D9DE",
       text: "放弃次数较多，部分任务可能过于困难或时间不足。"
     },
     {
       condition: focusHours > meetingHours && focusHours >= 10,
-      icon: <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#8A9A7B" }} />,
-      color: "#8A9A7B", bg: "#F0F4ED", border: "#C4D0B8",
+      icon: <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#6CC48D" }} />,
+      color: "#123524", bg: "#EDFAF3", border: "#9DD8B8",
       text: "专注时间充足，深度工作效率较高。"
     },
     {
       condition: taskCompletionRate >= 80,
-      icon: <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#8A9A7B" }} />,
-      color: "#8A9A7B", bg: "#F0F4ED", border: "#C4D0B8",
+      icon: <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#6CC48D" }} />,
+      color: "#123524", bg: "#EDFAF3", border: "#9DD8B8",
       text: "任务完成率高，本周执行力较强。"
     },
     {
       condition: meetingHours <= focusHours && habitCompletionRate >= 50 && replanCount <= 5 && totalHours > 0,
-      icon: <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#8A9A7B" }} />,
-      color: "#8A9A7B", bg: "#F0F4ED", border: "#C4D0B8",
+      icon: <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#6CC48D" }} />,
+      color: "#123524", bg: "#EDFAF3", border: "#9DD8B8",
       text: "整体安排较为平衡，专注时间充足，习惯达成良好。"
     }
   ];
@@ -1797,18 +1797,18 @@ export function AnalyticsView({
 
         <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
           <Card>
-            <div className="text-[14px] font-semibold text-slate-950">时间分配</div>
+            <div className="text-[14px] font-semibold text-[#111318]">时间分配</div>
             <div className="mt-4 space-y-4">
               {TIME_BARS.map((item) => (
                 <div key={item.label}>
-                  <div className="mb-1.5 flex items-center justify-between text-[12px] text-slate-600">
+                  <div className="mb-1.5 flex items-center justify-between text-[12px] text-[#4B5563]">
                     <span className="flex items-center gap-1.5">
                       <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
                       {item.label}
                     </span>
                     <span className="font-medium">{item.hours.toFixed(1)} 小时</span>
                   </div>
-                  <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-2.5 overflow-hidden rounded-full bg-[#F0F1F5]">
                     <div
                       className="h-full rounded-full transition-all duration-700"
                       style={{ width: `${totalHours > 0 ? Math.min((item.hours / totalHours) * 100, 100) : 0}%`, backgroundColor: item.color }}
@@ -1818,9 +1818,9 @@ export function AnalyticsView({
               ))}
             </div>
             {totalHours > 0 && (
-              <div className="mt-4 border-t border-slate-100 pt-3">
-                <div className="text-[11px] font-medium text-slate-500">本周概况</div>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-400">
+              <div className="mt-4 border-t border-[#E4E6EE] pt-3">
+                <div className="text-[11px] font-medium text-[#8A8D99]">本周概况</div>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#8A8D99]">
                   <span>高能量占比 {highIntensityShare}%</span>
                   <span>·</span>
                   <span>重排 {replanCount} 次</span>
@@ -1834,12 +1834,12 @@ export function AnalyticsView({
           </Card>
 
           <Card>
-            <div className="text-[14px] font-semibold text-slate-950">洞察与建议</div>
-            <div className="mt-3 space-y-2.5 text-[12px] leading-relaxed text-slate-600">
+            <div className="text-[14px] font-semibold text-[#111318]">洞察与建议</div>
+            <div className="mt-3 space-y-2.5 text-[12px] leading-relaxed text-[#4B5563]">
               {totalHours === 0 ? (
-                <p className="text-slate-400">暂无本周数据，请先添加任务、会议或习惯。</p>
+                <p className="text-[#8A8D99]">暂无本周数据，请先添加任务、会议或习惯。</p>
               ) : visibleInsights.length === 0 ? (
-                <p className="text-slate-500">本周数据一切正常，没有发现明显问题。</p>
+                <p className="text-[#8A8D99]">本周数据一切正常，没有发现明显问题。</p>
               ) : visibleInsights.map((insight, idx) => (
                 <div key={idx} className="flex items-start gap-2 rounded-lg p-2.5" style={{ backgroundColor: insight.bg, border: `1px solid ${insight.border}` }}>
                   {insight.icon}
@@ -1852,14 +1852,14 @@ export function AnalyticsView({
 
         {recommendations.length > 0 && (
           <Card>
-            <div className="flex items-center gap-2 text-[14px] font-semibold text-slate-950">
-              <Lightbulb className="h-4 w-4 text-[#C4A882]" />
+            <div className="flex items-center gap-2 text-[14px] font-semibold text-[#111318]">
+              <Lightbulb className="h-4 w-4 text-[#E6B85C]" />
               下周行动建议
             </div>
             <div className="mt-3 space-y-2">
               {recommendations.map((rec, idx) => (
-                <div key={idx} className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-600">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#C4A882]" />
+                <div key={idx} className="flex items-start gap-2 text-[12px] leading-relaxed text-[#4B5563]">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#E6B85C]" />
                   <span>{rec.text}</span>
                 </div>
               ))}
@@ -1869,51 +1869,51 @@ export function AnalyticsView({
 
         {totalHours > 0 && (
           <Card>
-            <div className="text-[14px] font-semibold text-slate-950">趋势分析</div>
+            <div className="text-[14px] font-semibold text-[#111318]">趋势分析</div>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-                <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">任务状态分布</div>
+              <div className="rounded-xl border border-[#E4E6EE] bg-[#FAFBFC] p-3">
+                <div className="text-[10px] font-medium uppercase tracking-wide text-[#8A8D99]">任务状态分布</div>
                 <div className="mt-2 flex items-center justify-between">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-600">
-                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                    <div className="flex items-center gap-1.5 text-[11px] text-[#4B5563]">
+                      <span className="h-2 w-2 rounded-full bg-[#6CC48D]" />
                       <span>已完成 {completedCount}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-600">
-                      <span className="h-2 w-2 rounded-full bg-amber-400" />
+                    <div className="flex items-center gap-1.5 text-[11px] text-[#4B5563]">
+                      <span className="h-2 w-2 rounded-full bg-[#E6B85C]" />
                       <span>已安排 {scheduledCount}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-600">
-                      <span className="h-2 w-2 rounded-full bg-slate-300" />
+                    <div className="flex items-center gap-1.5 text-[11px] text-[#4B5563]">
+                      <span className="h-2 w-2 rounded-full bg-[#8A8D99]" />
                       <span>待安排 {unscheduledCount}</span>
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-                <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">时间类型占比</div>
+              <div className="rounded-xl border border-[#E4E6EE] bg-[#FAFBFC] p-3">
+                <div className="text-[10px] font-medium uppercase tracking-wide text-[#8A8D99]">时间类型占比</div>
                 <div className="mt-2 space-y-1.5">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-slate-600">专注 vs 会议</span>
-                    <span className="font-medium" style={{ color: focusHours > meetingHours ? "#8A9A7B" : "#C4A882" }}>
+                    <span className="text-[#4B5563]">专注 vs 会议</span>
+                    <span className="font-medium" style={{ color: focusHours > meetingHours ? "#6CC48D" : "#EB6A67" }}>
                       {totalHours > 0 ? Math.round((focusHours / totalHours) * 100) : 0}% vs {totalHours > 0 ? Math.round((meetingHours / totalHours) * 100) : 0}%
                     </span>
                   </div>
-                  <div className="text-[10px] text-slate-400">
+                  <div className="text-[10px] text-[#8A8D99]">
                     {focusHours > meetingHours ? "专注时间更多，深度工作有保障" : "会议占比较多，需注意保护专注时间"}
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-                <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">执行健康度</div>
+              <div className="rounded-xl border border-[#E4E6EE] bg-[#FAFBFC] p-3">
+                <div className="text-[10px] font-medium uppercase tracking-wide text-[#8A8D99]">执行健康度</div>
                 <div className="mt-2 space-y-1.5">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-slate-600">完成率</span>
-                    <span className="font-medium" style={{ color: taskCompletionRate >= 70 ? "#8A9A7B" : "#C4A882" }}>
+                    <span className="text-[#4B5563]">完成率</span>
+                    <span className="font-medium" style={{ color: taskCompletionRate >= 70 ? "#6CC48D" : "#EB6A67" }}>
                       {taskCompletionRate}%
                     </span>
                   </div>
-                  <div className="text-[10px] text-slate-400">
+                  <div className="text-[10px] text-[#8A8D99]">
                     {taskCompletionRate >= 80 ? "执行力强，继续保持" : taskCompletionRate >= 50 ? "中等水平，可适当优化" : "完成率偏低，建议调整计划"}
                   </div>
                 </div>
