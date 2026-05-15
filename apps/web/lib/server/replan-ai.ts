@@ -38,6 +38,8 @@ export async function requestAiReplan(input: {
   newStart?: string;
   newEnd?: string;
   durationMinutes?: number;
+  allowOverlap?: boolean;
+  conflictStrategy?: string;
   currentSchedule: unknown[];
   newTask?: unknown;
   userInstruction?: string;
@@ -61,7 +63,7 @@ export async function requestAiReplan(input: {
         {
           role: "system",
           content:
-            "You are a time scheduling engine. Return JSON only. Generate a practical new schedule after a task change. Fixed/locked items are hard constraints: never move, resize, delete, or rename them. Only flexible items can be shifted. Shift lower priority flexible work first, insert buffer time when useful, and explain the change briefly in Chinese."
+            "You are a time scheduling engine. Return JSON only. Generate a practical new schedule after a task change. Fixed/locked items are hard constraints: never move, resize, delete, or rename them. Only flexible items can be shifted. If a user drags a block onto another block, treat the overlap as a temporary conflict to optimize, not as a valid final state. Resolve conflicts by keeping fixed items first, then higher priority and earlier deadline work, shifting lower priority flexible work first, inserting buffer time when useful, and explaining the change briefly in Chinese."
         },
         {
           role: "user",
@@ -77,7 +79,9 @@ export async function requestAiReplan(input: {
               earlyMinutes: input.earlyMinutes,
               newStart: input.newStart,
               newEnd: input.newEnd,
-              durationMinutes: input.durationMinutes
+              durationMinutes: input.durationMinutes,
+              allowOverlap: input.allowOverlap,
+              conflictStrategy: input.conflictStrategy
             },
             newTask: input.newTask,
             userInstruction: input.userInstruction,

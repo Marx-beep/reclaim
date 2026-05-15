@@ -41,6 +41,8 @@ export async function POST(request: Request) {
           newStart: parsed.newStart,
           newEnd: parsed.newEnd,
           durationMinutes: parsed.durationMinutes,
+          allowOverlap: parsed.allowOverlap,
+          conflictStrategy: parsed.conflictStrategy,
           currentSchedule: parsed.currentSchedule,
           newTask: parsed.newTask,
           userInstruction: parsed.userInstruction

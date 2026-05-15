@@ -386,6 +386,9 @@ function applyAction(events: CalendarEvent[], tasks: TaskItem[], action: ReplanA
         warnings.push("固定事件不能被拖动。");
         return;
       }
+      if (action.allowOverlap) {
+        warnings.push("检测到拖动后存在时间重合，系统已把重合作为冲突输入，并按优先级、重要性和固定约束重新优化。");
+      }
       target.day = action.day;
       target.startHour = snapToQuarterHour(action.startHour);
       break;

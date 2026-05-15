@@ -9,6 +9,7 @@ import type {
   HabitItem,
   PlannerSettings,
   QuickTaskInput,
+  ScheduleMode,
   SchedulingLinkItem,
   SmartMeetingItem,
   TaskItem
@@ -1514,6 +1515,7 @@ function formatLastSynced(lastSynced: string): string {
 function TimeArrangementImportCard() {
   const [file, setFile] = useState<File | null>(null);
   const [previewOnly, setPreviewOnly] = useState(false);
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("fixed");
   const [isUploading, setIsUploading] = useState(false);
   const [result, setResult] = useState<{
     parsedCount?: number;
@@ -1535,6 +1537,7 @@ function TimeArrangementImportCard() {
       body.append("file", file);
       body.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Shanghai");
       body.append("autoCreate", previewOnly ? "false" : "true");
+      body.append("scheduleMode", scheduleMode);
 
       const response = await fetch("/api/import/time-arrangement", {
         method: "POST",
@@ -1594,6 +1597,26 @@ function TimeArrangementImportCard() {
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             />
           </label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: "fixed" as const, title: "????", detail: "??/???????" },
+              { value: "flexible" as const, title: "????", detail: "??/???????" }
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setScheduleMode(option.value)}
+                className={`rounded-xl border px-3 py-2 text-left transition ${
+                  scheduleMode === option.value
+                    ? "border-[#2563EB] bg-[#EAF3FF] text-[#1D4ED8]"
+                    : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900"
+                }`}
+              >
+                <div className="text-[12px] font-semibold">{option.title}</div>
+                <div className="mt-0.5 text-[10px] opacity-75">{option.detail}</div>
+              </button>
+            ))}
+          </div>
           <div className="flex items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-[11px] text-slate-500">
               <input

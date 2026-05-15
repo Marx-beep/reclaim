@@ -87,6 +87,15 @@ describe("POST /api/import/schedule", () => {
 
     expect(response.status).toBe(200);
     expect(payload.createdCount).toBe(1);
+    expect(payload.scheduleMode).toBe("fixed");
+    expect(txCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          flexibility: "FIXED",
+          lockState: "HARD_LOCKED"
+        })
+      })
+    );
     expect(recomputeWindowSafely).toHaveBeenCalledTimes(1);
   });
 });

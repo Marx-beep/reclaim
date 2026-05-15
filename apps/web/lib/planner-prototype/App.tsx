@@ -427,15 +427,29 @@ export default function App() {
     events.find((event) => event.taskId === taskId && event.status !== "completed" && event.status !== "unscheduled") ?? null;
 
   const handleEventMove = (eventId: string, day: number, startHour: number) => {
+    const target = events.find((event) => event.id === eventId);
+    const candidate = target ? { ...target, day, startHour } : null;
+    const overlapCount = candidate
+      ? events.filter((event) => {
+          if (event.id === eventId || event.status === "completed" || event.status === "unscheduled") return false;
+          if (event.day !== candidate.day) return false;
+          return candidate.startHour < event.startHour + event.duration && event.startHour < candidate.startHour + candidate.duration;
+        }).length
+      : 0;
+
     void runReplan(
       {
         kind: "drag",
         eventId,
         day,
         startHour,
-        focusDay: day
+        focusDay: day,
+        allowOverlap: overlapCount > 0,
+        conflictStrategy: overlapCount > 0 ? "ai_replan" : "local_replan"
       },
-      `已拖动到 ${dayNames[day]} ${formatTime(startHour)}`
+      overlapCount > 0
+        ? `已允许临时重合，正在按重要性重排 ${overlapCount + 1} 个时间块`
+        : `已拖动到 ${dayNames[day]} ${formatTime(startHour)}`
     );
   };
 

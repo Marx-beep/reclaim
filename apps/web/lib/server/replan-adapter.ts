@@ -28,6 +28,8 @@ export const frontendReplanSchema = z.object({
   newStart: z.string().optional(),
   newEnd: z.string().optional(),
   durationMinutes: z.number().int().min(1).optional(),
+  allowOverlap: z.boolean().optional(),
+  conflictStrategy: z.enum(["ai_replan", "local_replan"]).optional(),
   currentSchedule: z.array(frontendScheduleItemSchema).default([]),
   newTask: frontendScheduleItemSchema.optional(),
   at: z.string().optional(),
@@ -121,6 +123,8 @@ export function toRuleEnginePayload(input: FrontendReplanInput) {
     newStart: normalizeDateTime(input.newStart, input.baseDate),
     newEnd: normalizeDateTime(input.newEnd, input.baseDate),
     durationMinutes: input.durationMinutes,
+    allowOverlap: input.allowOverlap,
+    conflictStrategy: input.conflictStrategy,
     at: normalizeDateTime(input.at, input.baseDate)
   };
 

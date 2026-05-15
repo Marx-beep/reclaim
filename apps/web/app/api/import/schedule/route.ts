@@ -28,6 +28,8 @@ export async function POST(request: Request) {
 
     const requestedTimezone = formData.get("timezone");
     const autoCreate = String(formData.get("autoCreate") ?? "true") !== "false";
+    const requestedScheduleMode = String(formData.get("scheduleMode") ?? "fixed");
+    const scheduleMode = requestedScheduleMode === "flexible" ? "flexible" : "fixed";
 
     const [user, policy] = await Promise.all([
       prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } }),
@@ -111,8 +113,8 @@ export async function POST(request: Request) {
               endAt,
               timezone,
               priority: "P2",
-              flexibility: "FIXED",
-              lockState: "BUSY",
+              flexibility: scheduleMode === "fixed" ? "FIXED" : "FLEXIBLE",
+              lockState: scheduleMode === "fixed" ? "HARD_LOCKED" : "BUSY",
               metadata: {
                 ...buildTagMetadata(undefined, {
                   categoryTag: item.categoryTag ?? inferCategoryTagByTitle(item.title),
@@ -121,6 +123,7 @@ export async function POST(request: Request) {
                 }),
                 imported: true,
                 importSource: "FILE",
+                scheduleMode,
                 importEngine,
                 aiExplanation,
                 confidence: item.confidence,
@@ -160,7 +163,8 @@ export async function POST(request: Request) {
       createdEventIds,
       skippedLines,
       skippedDuplicates,
-      autoCreate
+      autoCreate,
+      scheduleMode
     });
   } catch (error) {
     return fail(error instanceof Error ? error.message : "Failed to import schedule file");

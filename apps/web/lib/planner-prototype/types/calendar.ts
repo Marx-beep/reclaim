@@ -212,6 +212,8 @@ export interface ReplanAction {
   scheduleMode?: ScheduleMode;
   focusDay?: number;
   pinToSlot?: boolean;
+  allowOverlap?: boolean;
+  conflictStrategy?: "ai_replan" | "local_replan";
 }
 
 export type ReplanChangeType =
