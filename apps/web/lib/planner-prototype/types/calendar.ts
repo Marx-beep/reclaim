@@ -5,6 +5,7 @@ export type EventPriority = "P1" | "P2" | "P3" | "P4";
 export type EventStatus = "scheduled" | "completed" | "interrupted" | "overtime" | "unscheduled";
 
 export type EnergyLevel = "high" | "medium" | "low";
+export type ScheduleMode = "flexible" | "fixed";
 
 export type NavigationSection =
   | "Planner"
@@ -120,6 +121,7 @@ export interface QuickTaskInput {
   priority: EventPriority;
   urgent: boolean;
   energyLevel: EnergyLevel;
+  scheduleMode?: ScheduleMode;
   dueDay?: number;
   dueHour?: number;
   targetDay?: number;
@@ -207,6 +209,7 @@ export interface ReplanAction {
   dueDay?: number;
   dueHour?: number;
   energyLevel?: EnergyLevel;
+  scheduleMode?: ScheduleMode;
   focusDay?: number;
   pinToSlot?: boolean;
 }

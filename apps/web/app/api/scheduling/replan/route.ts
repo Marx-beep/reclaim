@@ -1,6 +1,6 @@
 import { fail, ok } from "@/lib/api/response";
 import { recordLlmUsage } from "@/lib/server/llm-admin";
-import { frontendReplanSchema, fromRuleEngineResponse, toRuleEnginePayload } from "@/lib/server/replan-adapter";
+import { frontendReplanSchema, fromRuleEngineResponse, preserveFixedSchedule, toRuleEnginePayload } from "@/lib/server/replan-adapter";
 import { requestAiReplan } from "@/lib/server/replan-ai";
 
 async function runLocalReplan(input: ReturnType<typeof frontendReplanSchema.parse>) {
@@ -42,6 +42,7 @@ export async function POST(request: Request) {
           newEnd: parsed.newEnd,
           durationMinutes: parsed.durationMinutes,
           currentSchedule: parsed.currentSchedule,
+          newTask: parsed.newTask,
           userInstruction: parsed.userInstruction
         });
 
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
         });
 
         return ok({
-          newSchedule: aiResult.newSchedule,
+          newSchedule: preserveFixedSchedule(parsed, aiResult.newSchedule),
           explanation: aiResult.explanation,
           source: "ai",
           model: aiResult.model,

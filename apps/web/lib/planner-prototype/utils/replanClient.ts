@@ -610,11 +610,10 @@ function applyAction(events: CalendarEvent[], tasks: TaskItem[], action: ReplanA
       const startDay = action.focusDay ?? 1;
       let chosenDay = startDay;
       let startHour: number | null;
-      let isFixed = false;
+      const isFixed = action.scheduleMode === "fixed";
 
       if (action.pinToSlot && typeof action.startHour === "number") {
         startHour = snapToQuarterHour(action.startHour);
-        isFixed = true;
       } else {
         startHour =
           typeof action.startHour === "number"

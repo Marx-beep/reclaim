@@ -39,6 +39,7 @@ export async function requestAiReplan(input: {
   newEnd?: string;
   durationMinutes?: number;
   currentSchedule: unknown[];
+  newTask?: unknown;
   userInstruction?: string;
 }) {
   const config = await getEffectiveLlmConfig();
@@ -60,7 +61,7 @@ export async function requestAiReplan(input: {
         {
           role: "system",
           content:
-            "You are a time scheduling engine. Return JSON only. Generate a practical new schedule after a task change. Preserve fixed/locked items, shift lower priority work first, insert buffer time when useful, and explain the change briefly in Chinese."
+            "You are a time scheduling engine. Return JSON only. Generate a practical new schedule after a task change. Fixed/locked items are hard constraints: never move, resize, delete, or rename them. Only flexible items can be shifted. Shift lower priority flexible work first, insert buffer time when useful, and explain the change briefly in Chinese."
         },
         {
           role: "user",
@@ -78,6 +79,7 @@ export async function requestAiReplan(input: {
               newEnd: input.newEnd,
               durationMinutes: input.durationMinutes
             },
+            newTask: input.newTask,
             userInstruction: input.userInstruction,
             currentSchedule: input.currentSchedule
           })

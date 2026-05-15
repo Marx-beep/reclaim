@@ -588,6 +588,7 @@ export default function App() {
         focusDay: targetDay,
         day: targetDay,
         startHour: startHour,
+        scheduleMode: task.scheduleMode,
         pinToSlot: task.pinToSlot
       },
       task.urgent || task.priority === "P1" ? "紧急任务已插入日历" : "新任务已加入日程"

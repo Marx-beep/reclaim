@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { Plus, CalendarDays, X } from "lucide-react";
 import { addDays, format } from "date-fns";
 import { useEffect, useRef, useState } from "react";
-import type { EventPriority, QuickTaskInput } from "../types/calendar";
+import type { EventPriority, QuickTaskInput, ScheduleMode } from "../types/calendar";
 import { formatTime, priorityLabel } from "../utils/calendarUtils";
 
 interface QuickAddModalProps {
@@ -16,6 +16,10 @@ interface QuickAddModalProps {
 }
 
 const priorityOptions: EventPriority[] = ["P1", "P2", "P3", "P4"];
+const scheduleModeOptions: Array<{ value: ScheduleMode; title: string; detail: string }> = [
+  { value: "flexible", title: "弹性任务", detail: "可参与智能重排" },
+  { value: "fixed", title: "固定任务", detail: "锁定时间不移动" }
+];
 
 export function QuickAddModal({
   isOpen,
@@ -28,6 +32,7 @@ export function QuickAddModal({
   const [title, setTitle] = useState("");
   const [durationHours, setDurationHours] = useState(1);
   const [priority, setPriority] = useState<EventPriority>("P2");
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("flexible");
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,14 +40,15 @@ export function QuickAddModal({
       setTitle("");
       setDurationHours(1);
       setPriority("P2");
+      setScheduleMode("flexible");
     }
   }, [isOpen, focusedDayIndex]);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         onClose();
       }
     };
@@ -52,6 +58,8 @@ export function QuickAddModal({
   }, [isOpen, onClose]);
 
   const handleSubmit = () => {
+    if (!title.trim()) return;
+
     const targetDay = initialSlot?.day ?? focusedDayIndex;
     const targetStartHour = initialSlot?.startHour;
 
@@ -59,8 +67,9 @@ export function QuickAddModal({
       title,
       durationHours,
       priority,
-      urgent: false,
-      energyLevel: "medium",
+      urgent: priority === "P1",
+      energyLevel: priority === "P1" ? "high" : "medium",
+      scheduleMode,
       targetDay,
       targetStartHour,
       pinToSlot: !!initialSlot
@@ -68,21 +77,19 @@ export function QuickAddModal({
     setTitle("");
     setDurationHours(1);
     setPriority("P2");
+    setScheduleMode("flexible");
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-end pt-20 pr-8">
-      <div
-        className="fixed inset-0 bg-black/20 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
 
       <div
         ref={modalRef}
-        className="relative z-10 w-[380px] rounded-2xl border border-[var(--color-border-subtle)] bg-white p-6 shadow-[0_8px_32px_rgba(15,23,42,0.15)]"
-        onClick={(e) => e.stopPropagation()}
+        className="relative z-10 w-[420px] rounded-2xl border border-[var(--color-border-subtle)] bg-white p-6 shadow-[0_8px_32px_rgba(15,23,42,0.15)]"
+        onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
           <h3 className="text-[16px] font-semibold text-[var(--color-text-primary)]">快速添加</h3>
@@ -162,9 +169,31 @@ export function QuickAddModal({
             </div>
           </div>
 
+          <div>
+            <div className="mb-1.5 text-[11px] font-medium text-[var(--color-text-muted)]">任务类型</div>
+            <div className="grid grid-cols-2 gap-2">
+              {scheduleModeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setScheduleMode(option.value)}
+                  className={`rounded-xl border px-3 py-2 text-left transition ${
+                    scheduleMode === option.value
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary-lighter)] text-[var(--color-primary-text)]"
+                      : "border-[var(--color-border-subtle)] bg-white text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
+                  }`}
+                >
+                  <div className="text-[12px] font-semibold">{option.title}</div>
+                  <div className="mt-0.5 text-[10px] opacity-75">{option.detail}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             type="button"
-            className="w-full rounded-xl bg-[var(--color-btn-primary)] py-2.5 text-[13px] font-semibold text-white shadow-[0_2px_8px_rgba(138,136,184,0.30)] transition hover:bg-[var(--color-btn-primary-hover)]"
+            className="w-full rounded-xl bg-[var(--color-btn-primary)] py-2.5 text-[13px] font-semibold text-white shadow-[0_2px_8px_rgba(138,136,184,0.30)] transition hover:bg-[var(--color-btn-primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!title.trim()}
             onClick={handleSubmit}
           >
             <Plus className="mr-1.5 inline h-4 w-4" />

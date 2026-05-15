@@ -13,7 +13,11 @@ export const frontendScheduleItemSchema = z.object({
   project: z.string().optional(),
   isLowLoad: z.boolean().optional(),
   is_low_load: z.boolean().optional(),
-  locked: z.boolean().optional()
+  locked: z.boolean().optional(),
+  fixed: z.boolean().optional(),
+  flexible: z.boolean().optional(),
+  movable: z.boolean().optional(),
+  scheduleMode: z.enum(["fixed", "flexible"]).optional()
 });
 
 export const frontendReplanSchema = z.object({
@@ -75,6 +79,16 @@ function normalizePriority(priority: string | undefined, locked: boolean | undef
   return priorityMap[(priority ?? "B").toUpperCase()] ?? "B";
 }
 
+function isFixedScheduleItem(item: z.infer<typeof frontendScheduleItemSchema>) {
+  return (
+    item.locked === true ||
+    item.fixed === true ||
+    item.scheduleMode === "fixed" ||
+    item.movable === false ||
+    item.flexible === false
+  );
+}
+
 function normalizeStatus(status: string | undefined) {
   if (!status) return "not_started";
   const normalized = status.toLowerCase();
@@ -90,12 +104,13 @@ export function toRuleEnginePayload(input: FrontendReplanInput) {
     title: item.title,
     start: normalizeDateTime(item.start, input.baseDate),
     end: normalizeDateTime(item.end, input.baseDate),
-    priority: normalizePriority(item.priority, item.locked),
+    priority: normalizePriority(item.priority, isFixedScheduleItem(item)),
     status: normalizeStatus(item.status),
     deadline: normalizeDateTime(item.deadline, input.baseDate),
     kind: item.kind ?? "work",
     is_low_load: item.is_low_load ?? item.isLowLoad ?? false,
-    project: item.project
+    project: item.project,
+    locked: isFixedScheduleItem(item)
   }));
 
   const event: Record<string, unknown> = {
@@ -115,16 +130,40 @@ export function toRuleEnginePayload(input: FrontendReplanInput) {
       title: input.newTask.title,
       start: normalizeDateTime(input.newTask.start, input.baseDate),
       end: normalizeDateTime(input.newTask.end, input.baseDate),
-      priority: normalizePriority(input.newTask.priority, input.newTask.locked),
+      priority: normalizePriority(input.newTask.priority, isFixedScheduleItem(input.newTask)),
       status: normalizeStatus(input.newTask.status),
       deadline: normalizeDateTime(input.newTask.deadline, input.baseDate),
       kind: input.newTask.kind ?? "work",
       is_low_load: input.newTask.is_low_load ?? input.newTask.isLowLoad ?? false,
-      project: input.newTask.project
+      project: input.newTask.project,
+      locked: isFixedScheduleItem(input.newTask)
     };
   }
 
   return { schedule, event };
+}
+
+export function preserveFixedSchedule(input: FrontendReplanInput, schedule: Array<{ start: string; end: string; title: string }>) {
+  const fixedItems = input.currentSchedule.filter(isFixedScheduleItem);
+  if (fixedItems.length === 0) return schedule;
+
+  const mutable = schedule.filter((item) => {
+    return !fixedItems.some((fixed) => {
+      const sameId = Boolean(fixed.id && item.title.includes(fixed.id));
+      const sameTaskId = Boolean(fixed.taskId && item.title.includes(fixed.taskId));
+      const sameTitle = item.title.trim() === fixed.title.trim();
+      return sameId || sameTaskId || sameTitle;
+    });
+  });
+
+  return [
+    ...fixedItems.map((item) => ({
+      start: toDisplayTime(normalizeDateTime(item.start, input.baseDate) ?? item.start),
+      end: toDisplayTime(normalizeDateTime(item.end, input.baseDate) ?? item.end),
+      title: item.title
+    })),
+    ...mutable
+  ];
 }
 
 export function fromRuleEngineResponse(response: {

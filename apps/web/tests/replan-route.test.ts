@@ -112,4 +112,53 @@ describe("POST /api/scheduling/replan", () => {
       })
     );
   });
+
+  it("keeps fixed schedule blocks unchanged after AI suggestions", async () => {
+    process.env.DEEPSEEK_API_KEY = "test-key";
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  newSchedule: [{ start: "10:00", end: "11:00", title: "弹性任务" }],
+                  explanation: "固定任务保持不变，仅调整弹性任务。"
+                })
+              }
+            }
+          ],
+          usage: {
+            prompt_tokens: 100,
+            completion_tokens: 30,
+            total_tokens: 130
+          }
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    const { POST } = await import("@/app/api/scheduling/replan/route");
+    const response = await POST(
+      new Request("http://localhost/api/scheduling/replan", {
+        method: "POST",
+        body: JSON.stringify({
+          type: "task_delayed",
+          taskId: "task_flexible",
+          delayMinutes: 30,
+          currentSchedule: [
+            { id: "fixed_001", title: "固定会议", start: "09:00", end: "10:00", scheduleMode: "fixed" },
+            { id: "task_flexible", title: "弹性任务", start: "10:00", end: "10:30", scheduleMode: "flexible" }
+          ],
+          baseDate: "2026-05-13"
+        })
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.source).toBe("ai");
+    expect(body.newSchedule).toContainEqual({ start: "09:00", end: "10:00", title: "固定会议" });
+    expect(body.newSchedule).toContainEqual({ start: "10:00", end: "11:00", title: "弹性任务" });
+  });
 });
