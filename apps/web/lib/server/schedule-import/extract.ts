@@ -1,6 +1,8 @@
 import mammoth from "mammoth";
 import pdfParse from "pdf-parse";
 import Tesseract from "tesseract.js";
+import { existsSync } from "node:fs";
+import path from "node:path";
 
 export type ExtractTextResult = {
   text: string;
@@ -11,8 +13,29 @@ function normalizeFileName(file: File) {
   return file.name.toLowerCase();
 }
 
+function firstExistingPath(candidates: string[]) {
+  return candidates.find((candidate) => existsSync(candidate));
+}
+
 async function extractFromImage(buffer: Buffer) {
-  const ocr = await Tesseract.recognize(buffer, "chi_sim+eng");
+  const localLangPathCandidates = [
+    path.join(process.cwd(), "tessdata"),
+    path.join(process.cwd(), "apps", "web", "tessdata")
+  ];
+  const langPath = localLangPathCandidates.find((candidate) => existsSync(path.join(candidate, "chi_sim.traineddata.gz")));
+  const workerPath = firstExistingPath([
+    path.join(process.cwd(), "..", "..", "node_modules", ".pnpm", "tesseract.js@5.1.1", "node_modules", "tesseract.js", "src", "worker-script", "node", "index.js"),
+    path.join(process.cwd(), "node_modules", ".pnpm", "tesseract.js@5.1.1", "node_modules", "tesseract.js", "src", "worker-script", "node", "index.js")
+  ]);
+  const corePath = firstExistingPath([
+    path.join(process.cwd(), "..", "..", "node_modules", ".pnpm", "tesseract.js-core@5.1.1", "node_modules", "tesseract.js-core", "tesseract-core-simd-lstm.wasm.js"),
+    path.join(process.cwd(), "node_modules", ".pnpm", "tesseract.js-core@5.1.1", "node_modules", "tesseract.js-core", "tesseract-core-simd-lstm.wasm.js")
+  ]);
+  const ocr = await Tesseract.recognize(buffer, "chi_sim+eng", {
+    ...(langPath ? { langPath } : {}),
+    ...(workerPath ? { workerPath } : {}),
+    ...(corePath ? { corePath } : {})
+  });
   return ocr.data.text;
 }
 
@@ -57,4 +80,3 @@ export async function extractTextFromScheduleFile(file: File): Promise<ExtractTe
 
   throw new Error("Unsupported file type. Please upload image, PDF, DOCX or TXT.");
 }
-

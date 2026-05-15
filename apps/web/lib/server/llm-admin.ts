@@ -66,7 +66,8 @@ function maskKey(value: string | undefined) {
 
 async function readJsonFile<T>(filePath: string, fallback: T) {
   try {
-    return JSON.parse(await readFile(filePath, "utf8")) as T;
+    const content = await readFile(filePath, "utf8");
+    return JSON.parse(content.replace(/^\uFEFF/, "")) as T;
   } catch {
     return fallback;
   }

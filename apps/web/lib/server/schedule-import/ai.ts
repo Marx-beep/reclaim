@@ -18,11 +18,26 @@ const aiScheduleImportSchema = z.object({
   explanation: z.string().max(1000).optional()
 });
 
+const alternativeArrayKeys = ["items", "events", "schedule", "timeBlocks", "time_blocks", "courses", "classes", "entries"];
+
 type ChatCompletionUsage = {
   prompt_tokens?: number;
   completion_tokens?: number;
   total_tokens?: number;
 };
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 90_000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 function extractJsonObject(content: string) {
   const cleaned = content.trim().replace(/^```json/i, "").replace(/^```/, "").replace(/```$/, "").trim();
@@ -38,6 +53,52 @@ function normalizeIsoDateTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return date.toISOString();
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function pickString(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
+function coerceAiImportPayload(raw: unknown) {
+  const root = asRecord(raw);
+  let items: unknown[] | undefined;
+  for (const key of alternativeArrayKeys) {
+    if (Array.isArray(root[key])) {
+      items = root[key] as unknown[];
+      break;
+    }
+  }
+  if (!items && Array.isArray(raw)) {
+    items = raw;
+  }
+
+  const normalizedItems = (items ?? []).map((value) => {
+    const record = asRecord(value);
+    return {
+      title: pickString(record, ["title", "name", "course", "courseName", "summary", "subject"]) ?? "Imported event",
+      startAt: pickString(record, ["startAt", "start", "startTime", "begin", "beginAt"]) ?? "",
+      endAt: pickString(record, ["endAt", "end", "endTime", "finish", "finishAt"]) ?? "",
+      categoryTag: pickString(record, ["categoryTag", "category", "type"]),
+      customTags: Array.isArray(record.customTags)
+        ? record.customTags.filter((tag): tag is string => typeof tag === "string")
+        : undefined,
+      confidence: typeof record.confidence === "number" || typeof record.confidence === "string" ? record.confidence : 0.75,
+      sourceLine: pickString(record, ["sourceLine", "source", "raw", "evidence"])
+    };
+  });
+
+  return {
+    items: normalizedItems,
+    explanation: pickString(root, ["explanation", "reason", "summary", "message"])
+  };
 }
 
 function toParsedItem(item: z.infer<typeof aiScheduleItemSchema>): ParsedScheduleItem | null {
@@ -70,7 +131,7 @@ export async function requestAiScheduleImport(input: {
   }
 
   const allowedCategories = CATEGORY_TAG_VALUES.join(", ");
-  const response = await fetch(config.apiUrl, {
+  const response = await fetchWithTimeout(config.apiUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -84,7 +145,7 @@ export async function requestAiScheduleImport(input: {
         {
           role: "system",
           content:
-            "你是时间安排文件解析器。只返回 JSON。把图片/PDF/Word OCR 或文本内容中的课程、会议、任务、排班、活动解析为可写入日历的时间块。不要编造不存在的内容；如果日期缺失，结合用户时区和当前日期推断最近一次合理日期。"
+            "You are a schedule-file parser. Return JSON only. Extract calendar-ready blocks from OCR/text of class timetables, meetings, tasks, shifts and activities. Do not invent entries. If date/time cannot be determined, omit that entry."
         },
         {
           role: "user",
@@ -92,23 +153,25 @@ export async function requestAiScheduleImport(input: {
             requiredOutput: {
               items: [
                 {
-                  title: "事件标题",
+                  title: "event title",
                   startAt: "ISO datetime",
                   endAt: "ISO datetime",
                   categoryTag: allowedCategories,
-                  customTags: ["文件导入"],
+                  customTags: ["file-import"],
                   confidence: 0.0,
-                  sourceLine: "原始依据"
+                  sourceLine: "raw evidence"
                 }
               ],
-              explanation: "中文说明"
+              explanation: "short Chinese explanation"
             },
+            acceptedAlternativeKeys: ["events", "schedule", "timeBlocks", "courses", "classes"],
             constraints: [
-              "startAt 和 endAt 必须是可被 JavaScript Date 解析的 ISO 时间",
-              "endAt 必须晚于 startAt",
-              "categoryTag 只能从 allowedCategories 中选择",
-              "无法确定的条目不要输出",
-              "标题要简洁，不要包含多余时间文字"
+              "startAt and endAt must be valid ISO datetimes parseable by JavaScript Date",
+              "endAt must be later than startAt",
+              "categoryTag must be selected from allowedCategories",
+              "omit uncertain rows",
+              "title should be concise and should not include redundant time text",
+              "For class timetable images, identify course name, weekday, period, class time and room. If only a week range is present, infer dates from the week range and weekday columns."
             ],
             timezone: input.timezone,
             nowIso: input.nowIso ?? new Date().toISOString(),
@@ -141,7 +204,7 @@ export async function requestAiScheduleImport(input: {
     throw new Error("AI returned empty schedule import content");
   }
 
-  const parsed = aiScheduleImportSchema.safeParse(JSON.parse(extractJsonObject(content)));
+  const parsed = aiScheduleImportSchema.safeParse(coerceAiImportPayload(JSON.parse(extractJsonObject(content))));
   if (!parsed.success) {
     await recordLlmUsage({ model: config.model, status: "error", reason: "schedule import validation failed" });
     throw new Error(`AI schedule import validation failed: ${parsed.error.message}`);

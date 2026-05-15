@@ -158,6 +158,14 @@ export async function POST(request: Request) {
       importEngine,
       aiExplanation,
       extractedTextPreview: extracted.text.slice(0, 8000),
+      parsedPreview: parsedItems.slice(0, 30).map((item) => ({
+        title: item.title,
+        startAt: item.startAt,
+        endAt: item.endAt,
+        confidence: item.confidence,
+        categoryTag: item.categoryTag,
+        sourceLine: item.sourceLine
+      })),
       parsedCount: parsedItems.length,
       createdCount,
       createdEventIds,

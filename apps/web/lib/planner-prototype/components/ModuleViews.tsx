@@ -1523,6 +1523,7 @@ function TimeArrangementImportCard() {
     importEngine?: string;
     aiExplanation?: string;
     message?: string;
+    scheduleMode?: string;
   } | null>(null);
 
   const canUpload = Boolean(file) && !isUploading;
@@ -1549,16 +1550,17 @@ function TimeArrangementImportCard() {
         importEngine?: string;
         aiExplanation?: string;
         message?: string;
+        scheduleMode?: string;
       };
 
       if (!response.ok) {
-        setResult({ message: data.message || "导入失败，请检查文件内容是否包含清晰的时间安排。" });
+        setResult({ message: data.message || "\u65f6\u95f4\u5b89\u6392\u5bfc\u5165\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u6587\u4ef6\u6216 API \u8bbe\u7f6e" });
         return;
       }
 
       setResult(data);
     } catch (error) {
-      setResult({ message: error instanceof Error ? error.message : "导入失败，请稍后重试。" });
+      setResult({ message: error instanceof Error ? error.message : "\u65f6\u95f4\u5b89\u6392\u5bfc\u5165\u5931\u8d25" });
     } finally {
       setIsUploading(false);
     }
@@ -1572,12 +1574,12 @@ function TimeArrangementImportCard() {
             <UploadCloud className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <div className="text-[15px] font-semibold text-slate-950">时间安排导入</div>
+            <div className="text-[15px] font-semibold text-slate-950">{"\u65f6\u95f4\u5b89\u6392\u5bfc\u5165"}</div>
             <div className="mt-1 max-w-2xl text-[12px] leading-5 text-slate-500">
-              上传课程表、排班表、图片、PDF、Word 或文本文件。系统会先调用后台大模型解析时间块，再自动写入日历；如果模型不可用，会回退本地规则解析。
+              {"\u4e0a\u4f20\u8bfe\u7a0b\u8868\u3001\u6392\u73ed\u8868\u3001\u4f1a\u8bae\u5b89\u6392\u3001PDF\u3001Word \u6216\u6587\u672c\u6587\u4ef6\u3002\u7cfb\u7edf\u4f1a\u8c03\u7528\u540e\u53f0\u5927\u6a21\u578b\u8bc6\u522b\u65f6\u95f4\u5757\uff0c\u5e76\u6309\u56fa\u5b9a/\u5f39\u6027\u89c4\u5219\u5199\u5165\u65e5\u5386\u3002"}
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-medium text-slate-500">
-              {["图片/OCR", "PDF", "Word docx", "TXT", "DeepSeek 解析", "自动填充日历"].map((item) => (
+              {["\u56fe\u7247/OCR", "PDF", "Word docx", "TXT", "DeepSeek \u89e3\u6790", "\u81ea\u52a8\u586b\u5145\u65e5\u5386"].map((item) => (
                 <span key={item} className="rounded-full border border-slate-200 bg-white px-2 py-1">
                   {item}
                 </span>
@@ -1589,7 +1591,7 @@ function TimeArrangementImportCard() {
         <div className="w-full shrink-0 space-y-2 lg:w-[360px]">
           <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-[#B8D7FF] bg-white px-3 py-3 text-[12px] text-slate-600 transition hover:border-[#2563EB] hover:text-slate-950">
             <FileText className="h-4 w-4 text-[#2563EB]" />
-            <span className="min-w-0 flex-1 truncate">{file ? file.name : "选择图片、PDF、Word 或文本文件"}</span>
+            <span className="min-w-0 flex-1 truncate">{file ? file.name : "\u9009\u62e9\u56fe\u7247\u3001PDF\u3001Word \u6216\u6587\u672c\u6587\u4ef6"}</span>
             <input
               type="file"
               className="hidden"
@@ -1597,10 +1599,11 @@ function TimeArrangementImportCard() {
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             />
           </label>
+
           <div className="grid grid-cols-2 gap-2">
             {[
-              { value: "fixed" as const, title: "????", detail: "??/???????" },
-              { value: "flexible" as const, title: "????", detail: "??/???????" }
+              { value: "fixed" as const, title: "\u56fa\u5b9a\u5bfc\u5165", detail: "\u8bfe\u7a0b/\u4f1a\u8bae\u4e0d\u53c2\u4e0e\u91cd\u6392" },
+              { value: "flexible" as const, title: "\u5f39\u6027\u5bfc\u5165", detail: "\u8ba1\u5212/\u4efb\u52a1\u53ef\u81ea\u52a8\u91cd\u6392" }
             ].map((option) => (
               <button
                 key={option.value}
@@ -1617,6 +1620,7 @@ function TimeArrangementImportCard() {
               </button>
             ))}
           </div>
+
           <div className="flex items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-[11px] text-slate-500">
               <input
@@ -1625,7 +1629,7 @@ function TimeArrangementImportCard() {
                 onChange={(event) => setPreviewOnly(event.target.checked)}
                 className="h-3.5 w-3.5 rounded border-slate-300"
               />
-              仅预览，不写入日历
+              {"\u4ec5\u9884\u89c8\uff0c\u4e0d\u5199\u5165\u65e5\u5386"}
             </label>
             <button
               type="button"
@@ -1633,7 +1637,7 @@ function TimeArrangementImportCard() {
               onClick={handleUpload}
               className="rounded-xl bg-[#111827] px-4 py-2 text-[12px] font-semibold text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] transition hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              {isUploading ? "识别中..." : previewOnly ? "识别预览" : "识别并导入"}
+              {isUploading ? "\u8bc6\u522b\u4e2d..." : previewOnly ? "\u4ec5\u9884\u89c8" : "\u8bc6\u522b\u5e76\u5bfc\u5165"}
             </button>
           </div>
           {result ? (
@@ -1642,8 +1646,9 @@ function TimeArrangementImportCard() {
                 result.message
               ) : (
                 <>
-                  已识别 {result.parsedCount ?? 0} 个时间块，已写入 {result.createdCount ?? 0} 个事件。
-                  {result.importEngine ? <span> 引擎：{result.importEngine}</span> : null}
+                  {"\u8bc6\u522b\u5230 "}{result.parsedCount ?? 0}{" \u4e2a\u65f6\u95f4\u5757\uff0c\u5df2\u521b\u5efa "}{result.createdCount ?? 0}{" \u4e2a\u65e5\u7a0b"}
+                  {result.scheduleMode ? <span>{"\uff0c\u5bfc\u5165\u65b9\u5f0f\uff1a"}{result.scheduleMode === "fixed" ? "\u56fa\u5b9a" : "\u5f39\u6027"}</span> : null}
+                  {result.importEngine ? <span>{"\uff0c\u5f15\u64ce\uff1a"}{result.importEngine}</span> : null}
                   {result.aiExplanation ? <div className="mt-1 text-emerald-600">{result.aiExplanation}</div> : null}
                 </>
               )}

@@ -24,3 +24,6 @@ services/scheduler/.venv/
 
 # Optional generated delivery folder
 # app-use/
+
+# Tesseract runtime-extracted language data
+apps/web/*.traineddata

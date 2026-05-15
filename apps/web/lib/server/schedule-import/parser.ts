@@ -174,13 +174,21 @@ function cleanupTitle(line: string, matchedRange: string) {
 }
 
 export function parseScheduleText(input: ParseScheduleTextInput) {
-  const baseDate = input.baseDate
+  let baseDate = input.baseDate
     ? Temporal.PlainDate.from(input.baseDate)
     : Temporal.Now.zonedDateTimeISO(input.timezone).toPlainDate();
   const lines = input.text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
+
+  const headerDateLine = lines.find((line) => /20\d{2}[-./]\d{1,2}[-./]\d{1,2}/.test(line));
+  if (!input.baseDate && headerDateLine) {
+    const headerDate = extractDate(headerDateLine, baseDate.year);
+    if (headerDate) {
+      baseDate = headerDate;
+    }
+  }
 
   const parsed: ParsedScheduleItem[] = [];
   const skipped: string[] = [];
