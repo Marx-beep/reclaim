@@ -28,12 +28,16 @@ $workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $appUseDir = Join-Path $workspaceRoot "app-use"
 $desktopDist = Join-Path $workspaceRoot "apps\desktop\dist-release"
 $docSource = Join-Path $workspaceRoot "docs\中文软件使用教程.md"
+$techDocSource = Join-Path $workspaceRoot "docs\技术框架1-2分钟介绍.md"
 $docFallback = Join-Path $workspaceRoot "app-use\中文软件使用教程.md"
 $pnpmCmd = Resolve-Pnpm
 
 Write-Host "[reclaim] Building web production bundle..."
 Push-Location $workspaceRoot
 & $pnpmCmd --filter @reclaim/web build | Out-Host
+if ($LASTEXITCODE -ne 0) {
+  throw "Web build failed with exit code $LASTEXITCODE"
+}
 
 Write-Host "[reclaim] Building desktop exe..."
 Get-Process -ErrorAction SilentlyContinue |
@@ -41,30 +45,42 @@ Get-Process -ErrorAction SilentlyContinue |
   ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
 
 $winUnpacked = Join-Path $desktopDist "win-unpacked"
+Get-ChildItem -LiteralPath $desktopDist -Filter "Reclaim-Time-Manager-*.exe" -File -ErrorAction SilentlyContinue |
+  Remove-Item -Force
 if (Test-Path -LiteralPath $winUnpacked) {
   Remove-Item -LiteralPath $winUnpacked -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 & $pnpmCmd --filter @reclaim/desktop dist:win | Out-Host
+if ($LASTEXITCODE -ne 0) {
+  throw "Desktop build failed with exit code $LASTEXITCODE"
+}
 Pop-Location
 
 New-Item -ItemType Directory -Path $appUseDir -Force | Out-Null
+Get-ChildItem -LiteralPath $appUseDir -Filter "Reclaim-Time-Manager-*.exe" -File -ErrorAction SilentlyContinue |
+  Remove-Item -Force
 
-$latestExe = Get-ChildItem -LiteralPath $desktopDist -Filter "*.exe" -File |
-  Sort-Object LastWriteTime -Descending |
-  Select-Object -First 1
+$artifacts = Get-ChildItem -LiteralPath $desktopDist -Filter "*.exe" -File |
+  Sort-Object LastWriteTime -Descending
 
-if (-not $latestExe) {
+if (-not $artifacts) {
   throw "No exe artifact found under $desktopDist"
 }
 
-Copy-Item -LiteralPath $latestExe.FullName -Destination (Join-Path $appUseDir $latestExe.Name) -Force
+foreach ($artifact in $artifacts) {
+  Copy-Item -LiteralPath $artifact.FullName -Destination (Join-Path $appUseDir $artifact.Name) -Force
+}
 if (Test-Path -LiteralPath $docSource) {
   Copy-Item -LiteralPath $docSource -Destination (Join-Path $appUseDir "中文软件使用教程.md") -Force
 } elseif (Test-Path -LiteralPath $docFallback) {
   Copy-Item -LiteralPath $docFallback -Destination (Join-Path $appUseDir "中文软件使用教程.md") -Force
 }
+if (Test-Path -LiteralPath $techDocSource) {
+  Copy-Item -LiteralPath $techDocSource -Destination (Join-Path $appUseDir "技术框架1-2分钟介绍.md") -Force
+}
 
 Write-Host "[reclaim] Done."
 Write-Host "[reclaim] Output folder: $appUseDir"
-Write-Host "[reclaim] Exe: $($latestExe.Name)"
+Write-Host "[reclaim] Artifacts:"
+$artifacts | ForEach-Object { Write-Host "[reclaim] - $($_.Name)" }

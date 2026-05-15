@@ -10,7 +10,7 @@
     "build": "node -e \"console.log('Use dist:win to build Windows exe')\"",
     "typecheck": "node -e \"console.log('No static typecheck in desktop shell')\"",
     "test": "node -e \"console.log('No desktop tests yet')\"",
-    "dist:win": "electron-builder --win portable --config.directories.output=dist-release"
+    "dist:win": "electron-builder --win portable nsis --config.directories.output=dist-release"
   },
   "devDependencies": {
     "electron": "^31.7.7",
@@ -29,9 +29,20 @@
     "win": {
       "signAndEditExecutable": false,
       "target": [
-        "portable"
-      ],
-      "artifactName": "Reclaim-Time-Manager-${version}-${arch}.exe"
+        "portable",
+        "nsis"
+      ]
+    },
+    "portable": {
+      "artifactName": "Reclaim-Time-Manager-${version}-${arch}-portable.exe"
+    },
+    "nsis": {
+      "artifactName": "Reclaim-Time-Manager-${version}-${arch}-setup.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Reclaim Time Manager"
     }
   }
 }
